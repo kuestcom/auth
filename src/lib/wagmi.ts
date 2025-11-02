@@ -1,10 +1,14 @@
 'use client';
 
 import { createConfig, http } from 'wagmi';
-import { injected, walletConnect } from 'wagmi/connectors';
+import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
 import { polygon, polygonAmoy } from 'wagmi/chains';
 
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+const defaultAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://auth.forka.st';
+const appIconUrl =
+  process.env.NEXT_PUBLIC_APP_ICON ??
+  'https://auth.forka.st/forkast-logo.svg';
 
 export const wagmiConfig = createConfig({
   chains: [polygon, polygonAmoy],
@@ -16,6 +20,13 @@ export const wagmiConfig = createConfig({
     injected({
       shimDisconnect: true,
     }),
+    coinbaseWallet({
+      appName: 'Forkast Auth',
+      appLogoUrl: appIconUrl,
+      preference: 'all',
+      enableMobileWalletLink: true,
+      reloadOnDisconnect: true,
+    }),
     ...(walletConnectProjectId
       ? [
           walletConnect({
@@ -24,8 +35,17 @@ export const wagmiConfig = createConfig({
             metadata: {
               name: 'Forkast Auth',
               description: 'Generate Forkast API credentials.',
-              url: 'https://forka.st',
-              icons: ['https://forka.st/favicon.ico?favicon.71f60070.ico'],
+              url: defaultAppUrl,
+              icons: [
+                appIconUrl,
+                'https://forka.st/favicon.ico?favicon.71f60070.ico',
+              ],
+            },
+            qrModalOptions: {
+              themeMode: 'dark',
+              themeVariables: {
+                '--wcm-z-index': '9999',
+              },
             },
           }),
         ]

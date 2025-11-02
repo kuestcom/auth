@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ChevronDown, X } from 'lucide-react';
 import Image from 'next/image';
 import type { Connector } from 'wagmi';
@@ -23,6 +23,7 @@ import type { KeyBundle } from '@/types/keygen';
 
 const supportedChains = [polygon, polygonAmoy];
 const supportedChainIds = new Set<number>(supportedChains.map((chain) => chain.id));
+const EMAIL_STORAGE_KEY = 'forkast-email';
 
 export function KeyGenerator() {
   const account = useAccount();
@@ -64,6 +65,29 @@ export function KeyGenerator() {
 
   const keyManagementDisabled = !bundle;
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const saved = window.localStorage.getItem(EMAIL_STORAGE_KEY);
+    if (saved) {
+      setEmailDraft(saved);
+    }
+  }, []);
+
+  const updateEmailDraft = (value: string) => {
+    setEmailDraft(value);
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const trimmed = value.trim();
+    if (trimmed) {
+      window.localStorage.setItem(EMAIL_STORAGE_KEY, trimmed);
+    } else {
+      window.localStorage.removeItem(EMAIL_STORAGE_KEY);
+    }
+  };
+
   const handleOpenModal = () => {
     setModalOpen(true);
     setModalStep(1);
@@ -88,8 +112,12 @@ export function KeyGenerator() {
     try {
       await connect({ connector: connectorItem });
     } catch (error) {
-      const message =
+      let message =
         error instanceof Error ? error.message : 'Failed to connect wallet.';
+      if (typeof message === 'string' && message.includes('Invalid App Configuration')) {
+        message =
+          'WalletConnect rejected this domain. Confirm the project allows this URL in https://cloud.walletconnect.com.';
+      }
       setModalError(message);
     } finally {
       setConnectingId(null);
@@ -196,6 +224,10 @@ export function KeyGenerator() {
           } else {
             setEmailNotice('Saved. You can revoke any time.');
           }
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(EMAIL_STORAGE_KEY, trimmedEmail);
+          }
+          updateEmailDraft(trimmedEmail);
         } catch (error) {
           setEmailNotice(
             error instanceof Error
@@ -205,14 +237,17 @@ export function KeyGenerator() {
         }
       } else {
         setEmailNotice(null);
+        updateEmailDraft('');
       }
 
-      setEmailDraft('');
       setModalInfo(null);
       handleCloseModal();
     } catch (error) {
       if (error instanceof UserRejectedRequestError) {
         setModalError('Signature was rejected in your wallet.');
+      } else if (error instanceof Error && error.message?.includes('Proposal expired')) {
+        setModalError('Wallet session expired. Reopen your wallet and try connecting again.');
+        disconnect();
       } else {
         setModalError(
           error instanceof Error
@@ -239,7 +274,13 @@ export function KeyGenerator() {
           : 'No keys found for this wallet.',
       );
     } catch (error) {
-      setKeysError(error instanceof Error ? error.message : 'Failed to load keys.');
+      const message = error instanceof Error ? error.message : 'Failed to load keys.';
+      setKeysError(message);
+      if (error instanceof Error && /(401|403)/.test(message)) {
+        setBundle(null);
+        setKeys([]);
+        setKeysHelper('Credentials look invalid. Generate a new API key to continue.');
+      }
     } finally {
       setKeysLoading(false);
     }
@@ -254,6 +295,11 @@ export function KeyGenerator() {
       await revokeForkastKey(auth, key);
       setKeys((previous) => previous.filter((value) => value !== key));
       setKeysHelper('Key revoked. Refresh to verify remaining credentials.');
+      if (bundle?.apiKey === key) {
+        setBundle(null);
+        setEmailNotice(null);
+        setKeysHelper('Key revoked. Generate a new API key to keep trading.');
+      }
     } catch (error) {
       setKeysError(error instanceof Error ? error.message : 'Failed to revoke key.');
     } finally {
@@ -307,6 +353,25 @@ export function KeyGenerator() {
         </div>
       </section>
 
+      {isConnected && account.address && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/5 px-5 py-3 backdrop-blur">
+          <span className="text-sm text-slate-200">
+            Connected as{' '}
+            <span className="font-mono text-white">
+              {shortenAddress(account.address)}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => disconnect()}
+            disabled={disconnectStatus === 'pending'}
+            className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Disconnect
+          </button>
+        </div>
+      )}
+
       <EnvBlock bundle={bundle} />
       {emailNotice && (
         <p className="rounded-2xl border border-white/10 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
@@ -323,6 +388,7 @@ export function KeyGenerator() {
           disabled={keyManagementDisabled}
           helper={keysHelper}
           error={keysError}
+          activeKey={bundle?.apiKey ?? null}
         />
       )}
 
@@ -372,7 +438,7 @@ export function KeyGenerator() {
                     id="forkast-email"
                     type="email"
                     value={emailDraft}
-                    onChange={(event) => setEmailDraft(event.target.value)}
+                    onChange={(event) => updateEmailDraft(event.target.value)}
                     placeholder="you@team.com"
                     className="w-full rounded-2xl border border-white/10 bg-[#0e1a2b] px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/30"
                   />
@@ -468,7 +534,7 @@ export function KeyGenerator() {
                     >
                       <div>
                         <p className="text-sm font-semibold text-white">
-                          Other wallets (QR)
+                          Other wallets (QR / browser)
                         </p>
                         <p className="text-xs text-slate-300">
                           Reown · WalletConnect v2

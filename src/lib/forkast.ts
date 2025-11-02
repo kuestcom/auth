@@ -26,19 +26,54 @@ function normalizeKeyBundle(payload: unknown): KeyBundle {
     throw new Error('Unexpected response when minting API key.');
   }
 
-  const maybeRecord = payload as Record<string, unknown>;
-  const apiKey =
-    (maybeRecord.apiKey as string | undefined) ??
-    (maybeRecord.api_key as string | undefined);
-  const apiSecret =
-    (maybeRecord.apiSecret as string | undefined) ??
-    (maybeRecord.api_secret as string | undefined);
-  const passphrase =
-    (maybeRecord.passphrase as string | undefined) ??
-    (maybeRecord.api_passphrase as string | undefined);
+  const unwrapNested = (value: unknown): Record<string, unknown> | null => {
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      if ('data' in record && typeof record.data === 'object') {
+        return record.data as Record<string, unknown>;
+      }
+      return record;
+    }
+    return null;
+  };
+
+  const record =
+    unwrapNested(payload) ??
+    (() => {
+      throw new Error('Unexpected response when minting API key.');
+    })();
+
+  const readFirst = (...keys: string[]) => {
+    for (const key of keys) {
+      const candidate = record[key];
+      if (typeof candidate === 'string' && candidate.length > 0) {
+        return candidate;
+      }
+    }
+    return undefined;
+  };
+
+  const apiKey = readFirst('apiKey', 'api_key', 'key', 'id');
+  const apiSecret = readFirst(
+    'apiSecret',
+    'api_secret',
+    'apiSecretBase64',
+    'api_secret_base64',
+    'secret',
+    'secretKey',
+    'secret_key',
+  );
+  const passphrase = readFirst(
+    'passphrase',
+    'api_passphrase',
+    'passphraseHex',
+    'passphrase_hex',
+    'api_passphrase_hex',
+  );
 
   if (!apiKey || !apiSecret || !passphrase) {
-    throw new Error('Forkast did not return API credentials.');
+    const keys = Object.keys(record).join(', ') || 'none';
+    throw new Error(`Forkast did not return API credentials. Payload keys: ${keys}`);
   }
 
   return {
@@ -239,4 +274,3 @@ export async function revokeForkastKey(auth: ForkastAuthContext, apiKey: string)
 
   return Boolean(revoked);
 }
-
