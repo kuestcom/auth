@@ -2,6 +2,104 @@ import { hmacSha256Hex } from '@/lib/crypto';
 import type { KeyBundle } from '@/types/keygen';
 
 const DEFAULT_FORKAST_BASE_URL = 'https://clob.forka.st';
+const MAX_ERROR_MESSAGE_LENGTH = 180;
+
+const STATUS_MESSAGE_MAP: Record<number, string> = {
+  400: 'Forkast rejected this request. Check your inputs and try again.',
+  401: 'Forkast rejected your credentials. Generate a new API key to continue.',
+  403: 'Forkast rejected your credentials. Generate a new API key to continue.',
+  404: 'Forkast could not find the requested resource.',
+  429: 'Too many requests hit Forkast. Please wait and try again.',
+  500: 'Forkast is temporarily unavailable. Try again shortly.',
+  502: 'Forkast is temporarily unavailable. Try again shortly.',
+  503: 'Forkast is temporarily unavailable. Try again shortly.',
+};
+
+function extractForkastErrorMessage(payload: unknown): string | undefined {
+  if (!payload) {
+    return undefined;
+  }
+
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (Array.isArray(payload)) {
+    for (const entry of payload) {
+      const message = extractForkastErrorMessage(entry);
+      if (message) {
+        return message;
+      }
+    }
+    return undefined;
+  }
+
+  if (typeof payload === 'object') {
+    const record = payload as Record<string, unknown>;
+    const candidateKeys = ['message', 'error', 'detail', 'reason'];
+    for (const key of candidateKeys) {
+      if (key in record) {
+        const message = extractForkastErrorMessage(record[key]);
+        if (message) {
+          return message;
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function sanitizeForkastError(
+  status: number | undefined,
+  rawMessage: string | undefined,
+  fallback: string,
+) {
+  const canonical = status !== undefined ? STATUS_MESSAGE_MAP[status] : undefined;
+  const normalizedRaw = rawMessage?.replace(/\s+/g, ' ').trim();
+  const trimmedRaw = normalizedRaw
+    ? normalizedRaw.slice(0, MAX_ERROR_MESSAGE_LENGTH)
+    : undefined;
+  const message = canonical ?? trimmedRaw ?? fallback;
+
+  if (typeof status === 'number') {
+    const suffix = ` (HTTP ${status})`;
+    return message.includes(suffix) ? message : `${message}${suffix}`;
+  }
+
+  return message;
+}
+
+async function throwForkastError(response: Response, fallback: string): Promise<never> {
+  let payload: unknown = null;
+  let rawMessage: string | undefined;
+
+  try {
+    payload = await response.clone().json();
+    rawMessage = extractForkastErrorMessage(payload);
+  } catch {
+    try {
+      const text = await response.clone().text();
+      if (text) {
+        payload = text;
+        rawMessage = extractForkastErrorMessage(text);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (payload !== null || rawMessage) {
+    console.error('Forkast API error', {
+      status: response.status,
+      message: rawMessage,
+      payload,
+    });
+  }
+
+  const message = sanitizeForkastError(response.status, rawMessage, fallback);
+  throw new Error(message);
+}
 
 export function getForkastBaseUrl() {
   return process.env.NEXT_PUBLIC_FORKAST_BASE_URL ?? DEFAULT_FORKAST_BASE_URL;
@@ -103,22 +201,7 @@ export async function createForkastKey({
   });
 
   if (!response.ok) {
-    let message = 'Failed to generate API key.';
-    try {
-      const errorPayload = await response.json();
-      if (errorPayload && typeof errorPayload === 'object') {
-        message =
-          (errorPayload as { message?: string }).message ??
-          (errorPayload as { error?: string }).error ??
-          message;
-      }
-    } catch {
-      // ignore parse failure
-    }
-    const enhancedMessage = response.status
-      ? `${message} (HTTP ${response.status})`
-      : message;
-    throw new Error(enhancedMessage);
+    await throwForkastError(response, 'Failed to generate API key.');
   }
 
   const data = await response.json();
@@ -192,22 +275,7 @@ export async function listForkastKeys(auth: ForkastAuthContext) {
   });
 
   if (!response.ok) {
-    let message = 'Failed to load keys.';
-    try {
-      const payload = await response.json();
-      if (payload && typeof payload === 'object') {
-        message =
-          (payload as { message?: string }).message ??
-          (payload as { error?: string }).error ??
-          message;
-      }
-    } catch {
-      // ignore parse error
-    }
-    const enhancedMessage = response.status
-      ? `${message} (HTTP ${response.status})`
-      : message;
-    throw new Error(enhancedMessage);
+    await throwForkastError(response, 'Failed to load keys.');
   }
 
   const data = await response.json();
@@ -248,22 +316,7 @@ export async function revokeForkastKey(auth: ForkastAuthContext, apiKey: string)
   });
 
   if (!response.ok) {
-    let message = 'Failed to revoke key.';
-    try {
-      const payload = await response.json();
-      if (payload && typeof payload === 'object') {
-        message =
-          (payload as { message?: string }).message ??
-          (payload as { error?: string }).error ??
-          message;
-      }
-    } catch {
-      // ignore
-    }
-    const enhancedMessage = response.status
-      ? `${message} (HTTP ${response.status})`
-      : message;
-    throw new Error(enhancedMessage);
+    await throwForkastError(response, 'Failed to revoke key.');
   }
 
   const payload = await response.json().catch(() => ({}));

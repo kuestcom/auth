@@ -24,6 +24,67 @@ import type { KeyBundle } from '@/types/keygen';
 const supportedChains = [polygon, polygonAmoy];
 const supportedChainIds = new Set<number>(supportedChains.map((chain) => chain.id));
 const EMAIL_STORAGE_KEY = 'forkast-email';
+const EMAIL_STORAGE_TTL_MS = 1000 * 60 * 60 * 24 * 3; // 3 days
+
+type EmailDraftCache = {
+  value: string;
+  expiresAt: number;
+};
+
+function readEmailDraftFromStorage(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(EMAIL_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+
+    if (typeof parsed === 'string') {
+      return parsed;
+    }
+
+    if (parsed && typeof parsed === 'object') {
+      const { value, expiresAt } = parsed as EmailDraftCache;
+      if (typeof value === 'string') {
+        if (typeof expiresAt === 'number') {
+          if (expiresAt > Date.now()) {
+            return value;
+          }
+          window.localStorage.removeItem(EMAIL_STORAGE_KEY);
+          return null;
+        }
+        return value;
+      }
+    }
+  } catch {
+    return raw;
+  }
+
+  return null;
+}
+
+function persistEmailDraft(value: string | null) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (!value) {
+    window.localStorage.removeItem(EMAIL_STORAGE_KEY);
+    return;
+  }
+
+  const payload: EmailDraftCache = {
+    value,
+    expiresAt: Date.now() + EMAIL_STORAGE_TTL_MS,
+  };
+
+  window.localStorage.setItem(EMAIL_STORAGE_KEY, JSON.stringify(payload));
+}
 
 export function KeyGenerator() {
   const account = useAccount();
@@ -59,6 +120,7 @@ export function KeyGenerator() {
   const [modalAdvancedOpen, setModalAdvancedOpen] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalInfo, setModalInfo] = useState<string | null>(null);
+  const [nonceError, setNonceError] = useState<string | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [emailNotice, setEmailNotice] = useState<string | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
@@ -66,10 +128,7 @@ export function KeyGenerator() {
   const keyManagementDisabled = !bundle;
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const saved = window.localStorage.getItem(EMAIL_STORAGE_KEY);
+    const saved = readEmailDraftFromStorage();
     if (saved) {
       setEmailDraft(saved);
     }
@@ -77,15 +136,8 @@ export function KeyGenerator() {
 
   const updateEmailDraft = (value: string) => {
     setEmailDraft(value);
-    if (typeof window === 'undefined') {
-      return;
-    }
     const trimmed = value.trim();
-    if (trimmed) {
-      window.localStorage.setItem(EMAIL_STORAGE_KEY, trimmed);
-    } else {
-      window.localStorage.removeItem(EMAIL_STORAGE_KEY);
-    }
+    persistEmailDraft(trimmed ? trimmed : null);
   };
 
   const handleOpenModal = () => {
@@ -94,6 +146,7 @@ export function KeyGenerator() {
     setModalAdvancedOpen(false);
     setModalError(null);
     setModalInfo(null);
+    setNonceError(null);
   };
 
   const handleCloseModal = () => {
@@ -104,6 +157,7 @@ export function KeyGenerator() {
     setModalInfo(null);
     setIsSigning(false);
     setConnectingId(null);
+    setNonceError(null);
   };
 
   const handleConnectorClick = async (connectorItem: Connector) => {
@@ -153,9 +207,20 @@ export function KeyGenerator() {
       return;
     }
 
-    const safeNonce = nonce.trim() || '0';
+    const normalizedNonce = nonce.trim();
+    const safeNonce = normalizedNonce === '' ? '0' : normalizedNonce;
+    if (!/^\d+$/.test(safeNonce)) {
+      const message = 'Nonce must contain only digits (0-9).';
+      setNonceError(message);
+      setModalError(message);
+      return;
+    }
+
     if (safeNonce !== nonce) {
       setNonce(safeNonce);
+    }
+    if (nonceError) {
+      setNonceError(null);
     }
 
     const timestamp = Math.floor(Date.now() / 1000).toString();
@@ -223,9 +288,6 @@ export function KeyGenerator() {
             }
           } else {
             setEmailNotice('Saved. You can revoke any time.');
-          }
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem(EMAIL_STORAGE_KEY, trimmedEmail);
           }
           updateEmailDraft(trimmedEmail);
         } catch (error) {
@@ -467,10 +529,26 @@ export function KeyGenerator() {
                       </span>
                       <input
                         value={nonce}
-                        onChange={(event) => setNonce(event.target.value)}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        onChange={(event) => {
+                          const rawValue = event.target.value;
+                          const digitsOnly = rawValue.replace(/\D+/g, '');
+                          setNonce(digitsOnly);
+                          if (!rawValue) {
+                            setNonceError(null);
+                          } else if (rawValue !== digitsOnly) {
+                            setNonceError('Nonce must contain only digits (0-9).');
+                          } else {
+                            setNonceError(null);
+                          }
+                        }}
                         className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white outline-none transition focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/30"
                         placeholder="0"
                       />
+                      {nonceError && (
+                        <span className="text-xs text-rose-200">{nonceError}</span>
+                      )}
                       <span className="text-xs text-slate-400">
                         Leave 0 unless you need a different key. Changing the nonce derives a
                         new API key.
