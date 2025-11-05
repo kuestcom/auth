@@ -22,8 +22,7 @@ function toBase64Url(bytes: ArrayBuffer) {
     return Buffer.from(view)
       .toString('base64')
       .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/g, '');
+      .replace(/\//g, '_');
   }
 
   if (typeof btoa === 'function') {
@@ -33,8 +32,7 @@ function toBase64Url(bytes: ArrayBuffer) {
     }
     return btoa(binary)
       .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/g, '');
+      .replace(/\//g, '_');
   }
 
   throw new Error('No base64 encoder available in this environment.');
