@@ -387,11 +387,11 @@ export function KeyGenerator() {
               </p>
             </div>
             <h2 className="mt-3 text-2xl font-semibold text-white md:text-3xl">
-              Mint an API key when you need it. Revoke when you don&apos;t.
+            Generate your API key
             </h2>
             <p className="mt-3 max-w-xl text-sm text-slate-300">
-              Sign a short EIP-712 message to prove wallet control. We return your keys and
-              never touch your funds.
+            Sign a short EIP-712 message to prove wallet control. <br />
+            <strong>We can’t access your funds. No wallet balance required.</strong>
             </p>
           </div>
           <button
@@ -558,7 +558,7 @@ export function KeyGenerator() {
             ) : (
               <div className="space-y-6">
                 <p className="text-sm text-slate-300">
-                  Connect your wallet and sign to mint live Forkast API credentials.
+                  Connect your wallet and sign to mint live Forkast API credentials
                 </p>
 
                 <div className="space-y-3">

@@ -7,10 +7,10 @@ export default function Home() {
       <div className="relative z-10 w-full">
         <div className="mx-auto max-w-5xl space-y-4 pb-6 text-center md:text-left">
           <p className="text-sm uppercase tracking-[0.35em] text-cyan-200">
-            EARLY ALPHA
+            FORKAST AUTH KEY GENERATOR
           </p>
           <h1 className="text-3xl font-semibold text-white md:text-4xl">
-            Generate and manage Forkast API credentials.
+            Generate and manage Forkast API credentials
           </h1>
           <p className="text-base text-slate-300 md:max-w-2xl">
             Connect wallet, sign once, get live trading API keys. Revoke anytime.
