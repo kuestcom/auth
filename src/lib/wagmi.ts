@@ -132,5 +132,40 @@ export function ensureAppKit() {
     features: sharedFeatures,
     featuredWalletIds: [metamaskWalletId],
   });
+
+  void appKitInstance
+    .getUniversalProvider()
+    .then(async (provider) => {
+      const core = provider?.client?.core as
+        | {
+            start?: () => Promise<void>;
+            relayer?: {
+              publish?: (...args: unknown[]) => unknown;
+              publishCustom?: (...args: unknown[]) => unknown;
+            };
+          }
+        | undefined;
+
+      if (!core) {
+        return;
+      }
+
+      try {
+        if (typeof core.start === 'function') {
+          await core.start();
+        }
+      } catch {
+        // ignore core startup issues; AppKit retries internally
+      }
+
+      const relayer = core.relayer;
+      if (relayer && typeof relayer.publishCustom !== 'function' && typeof relayer.publish === 'function') {
+        relayer.publishCustom = (...args: unknown[]) => relayer.publish?.(...args);
+      }
+    })
+    .catch(() => {
+      // swallow provider init issues; AppKit handles reconnection internally
+    });
+
   return appKitInstance;
 }
