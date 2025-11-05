@@ -16,6 +16,30 @@ const defaultAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://auth.forka.st'
 const appIconUrl =
   process.env.NEXT_PUBLIC_APP_ICON ??
   'https://auth.forka.st/forkast-logo.svg';
+const metamaskWalletId =
+  'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96';
+const connectorTypeOrder = [
+  'injected',
+  'walletConnect',
+  'recent',
+  'featured',
+  'custom',
+  'external',
+  'recommended',
+] as const;
+const sharedFeatures = {
+  analytics: process.env.NODE_ENV === 'production',
+  email: false,
+  emailShowWallets: false,
+  socials: false as const,
+  connectorTypeOrder: [...connectorTypeOrder],
+  history: false,
+  onramp: false,
+  swaps: false,
+  receive: true,
+  send: true,
+  reownAuthentication: false,
+};
 
 const metadata = {
   name: 'Forkast Auth',
@@ -50,6 +74,8 @@ const wagmiAdapter = walletConnectProjectId
       networks: appKitNetworks!,
       ssr: false,
       connectors: makeBaseConnectors(),
+      featuredWalletIds: [metamaskWalletId],
+      features: sharedFeatures,
     })
   : null;
 
@@ -105,9 +131,8 @@ export function ensureAppKit() {
       '--w3m-font-family': 'var(--font-sans, Inter, sans-serif)',
       '--w3m-accent': '#16CAC2',
     },
-    features: {
-      analytics: process.env.NODE_ENV === 'production',
-    },
+    features: sharedFeatures,
+    featuredWalletIds: [metamaskWalletId],
   });
   return appKitInstance;
 }

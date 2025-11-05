@@ -34,6 +34,8 @@ export function KeyGenerator() {
   const { switchChain, status: switchStatus } = useSwitchChain();
   const { signTypedDataAsync } = useSignTypedData();
   const appKit = useMemo(() => ensureAppKit(), []);
+  const connectedConnectorId = account.connector?.id ?? null;
+  const isAuthConnector = connectedConnectorId === 'AUTH';
 
   const isConnected = account.status === 'connected' && Boolean(account.address);
   const onAllowedChain =
@@ -41,10 +43,6 @@ export function KeyGenerator() {
       ? supportedChainIds.has(account.chainId)
       : false;
 
-  const injectedConnector = useMemo(
-    () => connectors.find((connectorItem) => connectorItem.id === 'injected'),
-    [connectors],
-  );
   const reownConnector = useMemo(
     () => connectors.find((connectorItem) => connectorItem.id === 'walletConnect'),
     [connectors],
@@ -67,7 +65,7 @@ export function KeyGenerator() {
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [nonceInputError, setNonceInputError] = useState<string | null>(null);
 
-  const keyManagementDisabled = !bundle;
+  const keyManagementDisabled = !bundle || isAuthConnector;
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -173,6 +171,9 @@ export function KeyGenerator() {
     if (!account.address) {
       throw new Error('Connect your wallet to manage keys.');
     }
+    if (isAuthConnector) {
+      throw new Error('Email or social logins cannot manage Forkast API keys. Connect a wallet.');
+    }
 
     return {
       address: account.address,
@@ -192,6 +193,12 @@ export function KeyGenerator() {
     }
     if (!onAllowedChain) {
       setModalError('Switch to Polygon Mainnet (137) or Amoy (80002) to continue.');
+      return;
+    }
+    if (isAuthConnector) {
+      setModalError(
+        'Email or social logins cannot sign this attestation. Connect a wallet like MetaMask or Rainbow.',
+      );
       return;
     }
 
@@ -352,7 +359,6 @@ export function KeyGenerator() {
     }
   };
 
-  const connectedConnectorId = account.connector?.id ?? null;
   const networkMismatch = isConnected && !onAllowedChain;
   const canSign =
     isConnected &&
@@ -556,30 +562,6 @@ export function KeyGenerator() {
                 </p>
 
                 <div className="space-y-3">
-                  {injectedConnector && (
-                    <button
-                      type="button"
-                      onClick={() => handleConnectorClick(injectedConnector)}
-                      className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-[#0e1a2b] px-4 py-3 text-left transition hover:bg-white/10"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          Browser wallets
-                        </p>
-                        <p className="text-xs text-slate-300">
-                          MetaMask, Rabby, Rainbow (desktop)
-                        </p>
-                      </div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-200">
-                        {connectedConnectorId === injectedConnector.id
-                          ? 'Connected'
-                          : connectingId === injectedConnector.id
-                            ? 'Connecting…'
-                            : 'Connect'}
-                      </span>
-                    </button>
-                  )}
-
                   {reownConnector ? (
                     <button
                       type="button"
