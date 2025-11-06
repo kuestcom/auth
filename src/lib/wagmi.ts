@@ -29,9 +29,6 @@ const connectorTypeOrder = [
 ] as const;
 const sharedFeatures = {
   analytics: process.env.NODE_ENV === 'production',
-  email: false,
-  emailShowWallets: false,
-  socials: false as const,
   connectorTypeOrder: [...connectorTypeOrder],
   history: false,
   onramp: false,
