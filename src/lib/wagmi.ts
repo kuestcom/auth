@@ -128,6 +128,7 @@ export function ensureAppKit() {
     },
     features: sharedFeatures,
     featuredWalletIds: [metamaskWalletId],
+    defaultAccountTypes: { eip155: 'eoa' },
   });
 
   void appKitInstance
