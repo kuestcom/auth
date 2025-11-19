@@ -1,6 +1,6 @@
 'use client'
 
-import type { AppKit } from '@reown/appkit'
+import type { AppKit } from '@reown/appkit/react'
 import type { ReactNode } from 'react'
 import { createAppKit } from '@reown/appkit/react'
 import { useEffect, useState } from 'react'
@@ -43,44 +43,11 @@ function getOrCreateAppKit() {
       featuredWalletIds,
       defaultAccountTypes: { eip155: 'eoa' },
     })
-
-    void warmUniversalProvider(appKitInstance)
     return appKitInstance
   }
   catch (error) {
     console.warn('Wallet initialization failed. Using local/default values.', error)
     return null
-  }
-}
-
-async function warmUniversalProvider(instance: AppKit) {
-  try {
-    const provider = await instance.getUniversalProvider()
-    const core = provider?.client?.core as
-      | {
-        start?: () => Promise<void>
-        relayer?: {
-          publish?: (...args: unknown[]) => unknown
-          publishCustom?: (...args: unknown[]) => unknown
-        }
-      }
-      | undefined
-
-    if (!core) {
-      return
-    }
-
-    if (typeof core.start === 'function') {
-      await core.start().catch(() => {})
-    }
-
-    const relayer = core.relayer
-    if (relayer && typeof relayer.publishCustom !== 'function' && typeof relayer.publish === 'function') {
-      relayer.publishCustom = (...args: unknown[]) => relayer.publish?.(...args)
-    }
-  }
-  catch {
-    // swallow provider init issues; AppKit handles reconnection internally
   }
 }
 
