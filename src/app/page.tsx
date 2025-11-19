@@ -1,12 +1,16 @@
-import { KeyGenerator } from '@/features/keygen/key-generator';
+import { KeyGenerator } from '@/features/keygen/key-generator'
 
 export default function Home() {
   return (
-    <main className="relative flex min-h-screen justify-center overflow-hidden px-4 pb-16 pt-12 sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-[480px] max-w-4xl rounded-full bg-[radial-gradient(circle,_rgba(40,181,254,0.18)_0%,_rgba(4,7,15,0)_70%)] blur-3xl" />
+    <main className="relative flex min-h-screen justify-center overflow-hidden px-4 pt-12 pb-16 sm:px-6 lg:px-8">
+      <div className={`
+        pointer-events-none absolute inset-x-0 top-0 mx-auto h-[480px] max-w-4xl rounded-full
+        bg-[radial-gradient(circle,_rgba(40,181,254,0.18)_0%,_rgba(4,7,15,0)_70%)] blur-3xl
+      `}
+      />
       <div className="relative z-10 w-full">
         <div className="mx-auto max-w-5xl space-y-4 pb-6 text-center md:text-left">
-          <p className="text-sm uppercase tracking-[0.35em] text-cyan-200">
+          <p className="text-sm tracking-[0.35em] text-cyan-200 uppercase">
             FORKAST AUTH KEY GENERATOR
           </p>
           <h1 className="text-3xl font-semibold text-white md:text-4xl">
@@ -24,5 +28,5 @@ export default function Home() {
         </div>
       </div>
     </main>
-  );
+  )
 }

@@ -1,23 +1,23 @@
-'use client';
+'use client'
 
-import { createConfig, http } from 'wagmi';
-import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
-import { polygon, polygonAmoy } from 'wagmi/chains';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import type { AppKitNetwork } from '@reown/appkit/networks';
+import type { AppKitNetwork } from '@reown/appkit/networks'
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import {
   polygon as appKitPolygon,
   polygonAmoy as appKitPolygonAmoy,
-} from '@reown/appkit/networks';
-import { createAppKit } from '@reown/appkit/react';
+} from '@reown/appkit/networks'
+import { createAppKit } from '@reown/appkit/react'
+import { createConfig, http } from 'wagmi'
+import { polygon, polygonAmoy } from 'wagmi/chains'
+import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors'
 
-const walletConnectProjectId = process.env.NEXT_PUBLIC_REOWN_APPKIT_PROJECT_ID;
-const defaultAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://auth.forka.st';
-const appIconUrl =
-  process.env.NEXT_PUBLIC_APP_ICON ??
-  'https://auth.forka.st/forkast-logo.svg';
-const metamaskWalletId =
-  'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96';
+const walletConnectProjectId = process.env.NEXT_PUBLIC_REOWN_APPKIT_PROJECT_ID
+const defaultAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://auth.forka.st'
+const appIconUrl
+  = process.env.NEXT_PUBLIC_APP_ICON
+    ?? 'https://auth.forka.st/forkast-logo.svg'
+const metamaskWalletId
+  = 'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96'
 const connectorTypeOrder = [
   'injected',
   'walletConnect',
@@ -26,7 +26,7 @@ const connectorTypeOrder = [
   'custom',
   'external',
   'recommended',
-] as const;
+] as const
 const sharedFeatures = {
   analytics: process.env.NODE_ENV === 'production',
   connectorTypeOrder: [...connectorTypeOrder],
@@ -36,7 +36,7 @@ const sharedFeatures = {
   receive: true,
   send: true,
   reownAuthentication: false,
-};
+}
 
 const metadata = {
   name: 'Forkast Auth',
@@ -46,24 +46,26 @@ const metadata = {
     appIconUrl,
     'https://forka.st/favicon.ico?favicon.71f60070.ico',
   ],
-};
+}
 
-const makeBaseConnectors = () => [
-  injected({
-    shimDisconnect: true,
-  }),
-  coinbaseWallet({
-    appName: 'Forkast Auth',
-    appLogoUrl: appIconUrl,
-    preference: 'all',
-    enableMobileWalletLink: true,
-    reloadOnDisconnect: true,
-  }),
-];
+function makeBaseConnectors() {
+  return [
+    injected({
+      shimDisconnect: true,
+    }),
+    coinbaseWallet({
+      appName: 'Forkast Auth',
+      appLogoUrl: appIconUrl,
+      preference: 'all',
+      enableMobileWalletLink: true,
+      reloadOnDisconnect: true,
+    }),
+  ]
+}
 
 const appKitNetworks = walletConnectProjectId
   ? ([appKitPolygon, appKitPolygonAmoy] as [AppKitNetwork, ...AppKitNetwork[]])
-  : null;
+  : null
 
 const wagmiAdapter = walletConnectProjectId
   ? new WagmiAdapter({
@@ -72,7 +74,7 @@ const wagmiAdapter = walletConnectProjectId
       ssr: false,
       connectors: makeBaseConnectors(),
     })
-  : null;
+  : null
 
 const fallbackConfig = createConfig({
   chains: [polygon, polygonAmoy],
@@ -99,22 +101,22 @@ const fallbackConfig = createConfig({
       : []),
   ],
   multiInjectedProviderDiscovery: false,
-});
+})
 
-export const wagmiConfig = wagmiAdapter?.wagmiConfig ?? fallbackConfig;
-export const isAppKitEnabled = Boolean(wagmiAdapter);
+export const wagmiConfig = wagmiAdapter?.wagmiConfig ?? fallbackConfig
+export const isAppKitEnabled = Boolean(wagmiAdapter)
 
-let appKitInstance: ReturnType<typeof createAppKit> | null = null;
+let appKitInstance: ReturnType<typeof createAppKit> | null = null
 
 export function ensureAppKit() {
   if (!wagmiAdapter || !appKitNetworks || !walletConnectProjectId) {
-    return null;
+    return null
   }
   if (typeof window === 'undefined') {
-    return null;
+    return null
   }
   if (appKitInstance) {
-    return appKitInstance;
+    return appKitInstance
   }
   appKitInstance = createAppKit({
     projectId: walletConnectProjectId,
@@ -129,41 +131,42 @@ export function ensureAppKit() {
     features: sharedFeatures,
     featuredWalletIds: [metamaskWalletId],
     defaultAccountTypes: { eip155: 'eoa' },
-  });
+  })
 
   void appKitInstance
     .getUniversalProvider()
     .then(async (provider) => {
       const core = provider?.client?.core as
         | {
-            start?: () => Promise<void>;
-            relayer?: {
-              publish?: (...args: unknown[]) => unknown;
-              publishCustom?: (...args: unknown[]) => unknown;
-            };
+          start?: () => Promise<void>
+          relayer?: {
+            publish?: (...args: unknown[]) => unknown
+            publishCustom?: (...args: unknown[]) => unknown
           }
-        | undefined;
+        }
+        | undefined
 
       if (!core) {
-        return;
+        return
       }
 
       try {
         if (typeof core.start === 'function') {
-          await core.start();
+          await core.start()
         }
-      } catch {
+      }
+      catch {
         // ignore core startup issues; AppKit retries internally
       }
 
-      const relayer = core.relayer;
+      const relayer = core.relayer
       if (relayer && typeof relayer.publishCustom !== 'function' && typeof relayer.publish === 'function') {
-        relayer.publishCustom = (...args: unknown[]) => relayer.publish?.(...args);
+        relayer.publishCustom = (...args: unknown[]) => relayer.publish?.(...args)
       }
     })
     .catch(() => {
       // swallow provider init issues; AppKit handles reconnection internally
-    });
+    })
 
-  return appKitInstance;
+  return appKitInstance
 }

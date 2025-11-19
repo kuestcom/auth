@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint . --fix"
   },
   "dependencies": {
     "@reown/appkit": "1.8.13",
@@ -21,12 +21,17 @@
     "wagmi": "2.19.4"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^6.2.0",
+    "@eslint-react/eslint-plugin": "^2.2.4",
+    "@next/eslint-plugin-next": "16.0.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.19.1",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19",
-    "eslint": "^9.39.1",
-    "eslint-config-next": "^16.0.3",
+    "eslint": "^9.39.0",
+    "eslint-plugin-better-tailwindcss": "^3.7.8",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "eslint-plugin-react-refresh": "^0.4.24",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3"
   },

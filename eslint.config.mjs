@@ -1,18 +1,33 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import antfu from '@antfu/eslint-config'
+import eslintPluginBetterTailwindcss from 'eslint-plugin-better-tailwindcss'
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
-
-export default eslintConfig;
+export default antfu({
+  react: true,
+  nextjs: true,
+}, {
+  plugins: {
+    'better-tailwindcss': eslintPluginBetterTailwindcss,
+  },
+  rules: {
+    ...eslintPluginBetterTailwindcss.configs['recommended-error'].rules,
+    'node/prefer-global/process': 'off',
+    'no-console': 'off',
+    'curly': ['error', 'all'],
+    'react/no-array-index-key': 'off',
+    'react-dom/no-dangerously-set-innerhtml': 'off',
+    'react-refresh/only-export-components': 'off',
+    'react-hooks/set-state-in-effect': 'off',
+    'react-hooks-extra/no-direct-set-state-in-use-effect': 'off',
+    'func-style': ['error', 'declaration', { allowArrowFunctions: false }],
+    'better-tailwindcss/enforce-consistent-line-wrapping': ['error', {
+      group: 'newLine',
+      preferSingleLine: true,
+      printWidth: 120,
+    }],
+  },
+  settings: {
+    'better-tailwindcss': {
+      tailwindConfig: './src/app/(platform)/globals.css',
+    },
+  },
+})

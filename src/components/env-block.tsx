@@ -1,27 +1,30 @@
-'use client';
+'use client'
 
-import { useMemo } from 'react';
+import type { KeyBundle } from '@/types/keygen'
 
-import { CopyButton } from '@/components/copy-button';
-import type { KeyBundle } from '@/types/keygen';
+import { useMemo } from 'react'
+import { CopyButton } from '@/components/copy-button'
 
-type EnvBlockProps = {
-  bundle: KeyBundle | null;
-};
+interface EnvBlockProps {
+  bundle: KeyBundle | null
+}
 
 export function EnvBlock({ bundle }: EnvBlockProps) {
   const envLines = useMemo(() => {
-    if (!bundle) return '';
+    if (!bundle) {
+      return ''
+    }
+
     return [
       `FORKAST_ADDRESS=${bundle.address}`,
       `FORKAST_API_KEY=${bundle.apiKey}`,
       `FORKAST_API_SECRET=${bundle.apiSecret}`,
       `FORKAST_PASSPHRASE=${bundle.passphrase}`,
-    ].join('\n');
-  }, [bundle]);
+    ].join('\n')
+  }, [bundle])
 
   if (!bundle) {
-    return null;
+    return null
   }
 
   const inputs = [
@@ -41,7 +44,7 @@ export function EnvBlock({ bundle }: EnvBlockProps) {
       label: 'FORKAST_PASSPHRASE',
       value: bundle.passphrase,
     },
-  ];
+  ]
 
   return (
     <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
@@ -52,9 +55,9 @@ export function EnvBlock({ bundle }: EnvBlockProps) {
         </p>
       </header>
       <div className="space-y-3">
-        {inputs.map((input) => (
+        {inputs.map(input => (
           <label key={input.label} className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+            <span className="text-xs font-semibold tracking-[0.24em] text-slate-400 uppercase">
               {input.label}
             </span>
             <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0e1a2b] px-3 py-2">
@@ -74,7 +77,7 @@ export function EnvBlock({ bundle }: EnvBlockProps) {
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+          <span className="text-xs font-semibold tracking-[0.24em] text-slate-400 uppercase">
             .env block
           </span>
           <CopyButton value={envLines} ariaLabel="Copy env block" />
@@ -83,9 +86,12 @@ export function EnvBlock({ bundle }: EnvBlockProps) {
           value={envLines}
           readOnly
           rows={4}
-          className="w-full resize-none rounded-2xl border border-white/10 bg-[#0a1627] p-3 font-mono text-xs leading-relaxed text-white outline-none"
+          className={`
+            w-full resize-none rounded-2xl border border-white/10 bg-[#0a1627] p-3 font-mono text-xs leading-relaxed
+            text-white outline-none
+          `}
         />
       </div>
     </section>
-  );
+  )
 }
