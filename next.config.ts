@@ -4,7 +4,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   typedRoutes: true,
   env: {
-    CLOB_URL: 'https://clob.forka.st',
+    CLOB_URL: process.env.CLOB_URL ?? 'https://clob.forka.st',
+    RELAYER_URL: process.env.RELAYER_URL ?? 'https://relayer.forka.st',
   },
 }
 

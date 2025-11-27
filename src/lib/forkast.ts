@@ -1,154 +1,201 @@
-import type { KeyBundle } from '@/types/keygen'
+import type { KeyBundle } from "@/types/keygen";
 
 const FORKAST_DEBUG_ERRORS_ENABLED = (() => {
-  const value = process.env.NEXT_PUBLIC_FORKAST_DEBUG_ERRORS
+  const value = process.env.NEXT_PUBLIC_FORKAST_DEBUG_ERRORS;
   if (!value) {
-    return false
+    return false;
   }
-  const normalized = value.trim().toLowerCase()
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
-})()
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized === "1" ||
+    normalized === "true" ||
+    normalized === "yes" ||
+    normalized === "on"
+  );
+})();
+
+function getForkastBaseUrls() {
+  const values = [process.env.CLOB_URL, process.env.RELAYER_URL]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  const unique = Array.from(new Set(values));
+  if (unique.length === 0) {
+    throw new Error("CLOB_URL or RELAYER_URL must be defined.");
+  }
+  return unique;
+}
 
 export function getForkastBaseUrl() {
-  return process.env.CLOB_URL!
+  return getForkastBaseUrls()[0];
 }
 
 interface CreateForkastKeyInput {
-  address: string
-  signature: string
-  timestamp: string
-  nonce: string
+  address: string;
+  signature: string;
+  timestamp: string;
+  nonce: string;
 }
 
-function sanitizeForkastMessage(status: number | undefined, rawMessage?: string) {
-  const normalized = (rawMessage ?? '').replace(/\s+/g, ' ').trim()
-  const truncated = normalized.slice(0, 200)
+function sanitizeForkastMessage(
+  status: number | undefined,
+  rawMessage?: string,
+) {
+  const normalized = (rawMessage ?? "").replace(/\s+/g, " ").trim();
+  const truncated = normalized.slice(0, 200);
 
-  let sanitized: string
+  let sanitized: string;
   if (status === 401 || status === 403) {
-    sanitized = 'Credentials rejected by Forkast. Generate a fresh API key and try again.'
-  }
-  else if (status === 429) {
-    sanitized = 'Too many requests. Hold on a moment before retrying.'
-  }
-  else if (status === 500 || status === 503) {
-    sanitized = 'Forkast is temporarily unavailable. Retry shortly.'
-  }
-  else if (truncated.length > 0) {
-    sanitized = truncated
-  }
-  else {
-    sanitized = 'Forkast request failed. Please try again.'
+    sanitized =
+      "Credentials rejected by Forkast. Generate a fresh API key and try again.";
+  } else if (status === 429) {
+    sanitized = "Too many requests. Hold on a moment before retrying.";
+  } else if (status === 500 || status === 503) {
+    sanitized = "Forkast is temporarily unavailable. Retry shortly.";
+  } else if (truncated.length > 0) {
+    sanitized = truncated;
+  } else {
+    sanitized = "Forkast request failed. Please try again.";
   }
 
   if (FORKAST_DEBUG_ERRORS_ENABLED && truncated.length > 0) {
     if (sanitized === truncated) {
-      return truncated
+      return truncated;
     }
-    return `${truncated} — ${sanitized}`
+    return `${truncated} — ${sanitized}`;
   }
 
-  return sanitized
+  return sanitized;
 }
 
-function normalizeKeyBundle(payload: unknown): Omit<KeyBundle, 'address'> {
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('Unexpected response when minting API key.')
+function normalizeKeyBundle(payload: unknown): Omit<KeyBundle, "address"> {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Unexpected response when minting API key.");
   }
 
   function unwrapNested(value: unknown): Record<string, unknown> | null {
-    if (value && typeof value === 'object') {
-      const record = value as Record<string, unknown>
-      if ('data' in record && typeof record.data === 'object') {
-        return record.data as Record<string, unknown>
+    if (value && typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      if ("data" in record && typeof record.data === "object") {
+        return record.data as Record<string, unknown>;
       }
-      return record
+      return record;
     }
-    return null
+    return null;
   }
 
-  const record
-    = unwrapNested(payload)
-      ?? (() => {
-        throw new Error('Unexpected response when minting API key.')
-      })()
+  const record =
+    unwrapNested(payload) ??
+    (() => {
+      throw new Error("Unexpected response when minting API key.");
+    })();
 
   function readFirst(...keys: string[]) {
     for (const key of keys) {
-      const candidate = record[key]
-      if (typeof candidate === 'string' && candidate.length > 0) {
-        return candidate
+      const candidate = record[key];
+      if (typeof candidate === "string" && candidate.length > 0) {
+        return candidate;
       }
     }
-    return undefined
+    return undefined;
   }
 
-  const apiKey = readFirst('apiKey', 'api_key', 'key', 'id')
+  const apiKey = readFirst("apiKey", "api_key", "key", "id");
   const apiSecret = readFirst(
-    'apiSecret',
-    'api_secret',
-    'apiSecretBase64',
-    'api_secret_base64',
-    'secret',
-    'secretKey',
-    'secret_key',
-  )
+    "apiSecret",
+    "api_secret",
+    "apiSecretBase64",
+    "api_secret_base64",
+    "secret",
+    "secretKey",
+    "secret_key",
+  );
   const passphrase = readFirst(
-    'passphrase',
-    'api_passphrase',
-    'passphraseHex',
-    'passphrase_hex',
-    'api_passphrase_hex',
-  )
+    "passphrase",
+    "api_passphrase",
+    "passphraseHex",
+    "passphrase_hex",
+    "api_passphrase_hex",
+  );
 
   if (!apiKey || !apiSecret || !passphrase) {
-    const keys = Object.keys(record).join(', ') || 'none'
-    throw new Error(`Forkast did not return API credentials. Payload keys: ${keys}`)
+    const keys = Object.keys(record).join(", ") || "none";
+    throw new Error(
+      `Forkast did not return API credentials. Payload keys: ${keys}`,
+    );
   }
 
   return {
     apiKey,
     apiSecret,
     passphrase,
-  }
+  };
 }
 
-export async function createForkastKey({ address, signature, timestamp, nonce }: CreateForkastKeyInput) {
-  const baseUrl = getForkastBaseUrl()
-  const url = new URL('/auth/api-key', baseUrl)
+async function requestForkastKey(
+  baseUrl: string,
+  { address, signature, timestamp, nonce }: CreateForkastKeyInput,
+) {
+  const url = new URL("/auth/api-key", baseUrl);
 
   const response = await fetch(url.toString(), {
-    method: 'POST',
+    method: "POST",
     headers: {
       FORKAST_ADDRESS: address,
       FORKAST_SIGNATURE: signature,
       FORKAST_TIMESTAMP: timestamp,
       FORKAST_NONCE: nonce,
     },
-  })
+  });
 
   if (!response.ok) {
-    let message = 'Failed to generate API key.'
+    let message = "Failed to generate API key.";
     try {
-      const errorPayload = await response.json()
-      if (errorPayload && typeof errorPayload === 'object') {
-        message
-          = (errorPayload as { message?: string }).message
-            ?? (errorPayload as { error?: string }).error
-            ?? message
+      const errorPayload = await response.json();
+      if (errorPayload && typeof errorPayload === "object") {
+        message =
+          (errorPayload as { message?: string }).message ??
+          (errorPayload as { error?: string }).error ??
+          message;
       }
-    }
-    catch {
+    } catch {
       // ignore parse failure
     }
-    const sanitized = sanitizeForkastMessage(response.status, message)
-    console.warn('[forkast] create key failed', {
+    const sanitized = sanitizeForkastMessage(response.status, message);
+    console.warn("[forkast] create key failed", {
+      baseUrl,
       status: response.status,
       message,
-    })
-    throw new Error(sanitized)
+    });
+    throw new Error(sanitized);
   }
 
-  const data = await response.json()
-  return normalizeKeyBundle(data)
+  const data = await response.json();
+  return normalizeKeyBundle(data);
+}
+
+export async function createForkastKey(input: CreateForkastKeyInput) {
+  const targets = getForkastBaseUrls();
+  let firstSuccess: Omit<KeyBundle, "address"> | null = null;
+  let lastError: Error | null = null;
+
+  for (const baseUrl of targets) {
+    try {
+      const result = await requestForkastKey(baseUrl, input);
+      if (!firstSuccess) {
+        firstSuccess = result;
+      }
+    } catch (error) {
+      const normalized =
+        error instanceof Error ? error : new Error(String(error));
+      lastError = normalized;
+      // already logged inside requestForkastKey
+    }
+  }
+
+  if (firstSuccess) {
+    return firstSuccess;
+  }
+
+  throw lastError ?? new Error("Failed to generate API key.");
 }
