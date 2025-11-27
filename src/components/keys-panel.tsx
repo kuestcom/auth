@@ -10,6 +10,7 @@ interface KeysPanelProps {
   disabled?: boolean;
   error?: string | null;
   helper?: string | null;
+  activeKey?: string | null;
 }
 
 export function KeysPanel({
@@ -20,6 +21,7 @@ export function KeysPanel({
   disabled = false,
   error,
   helper,
+  activeKey = null,
 }: KeysPanelProps) {
   if (keys.length === 0) {
     return null;
@@ -51,35 +53,38 @@ export function KeysPanel({
       </header>
 
       <div className="space-y-3">
-        {keys.map((key) => (
-          <div
-            key={key}
-            className={`
+        {keys.map((key) => {
+          const isActive = activeKey === key;
+          return (
+            <div
+              key={key}
+              className={`
               flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0e1a2b] p-4 text-sm text-white
               md:flex-row md:items-center md:justify-between
             `}
-          >
-            <div className="flex items-center gap-2">
-              <span className="truncate font-mono text-xs md:text-sm">
-                {key}
-              </span>
-              <CopyButton value={key} size="sm" ariaLabel="Copy API key" />
-            </div>
-            <button
-              type="button"
-              onClick={() => onRevoke(key)}
-              disabled={loading || disabled}
-              className={`
+            >
+              <div className="flex items-center gap-2">
+                <span className="truncate font-mono text-xs md:text-sm">
+                  {key}
+                </span>
+                <CopyButton value={key} size="sm" ariaLabel="Copy API key" />
+              </div>
+              <button
+                type="button"
+                onClick={() => onRevoke(key)}
+                disabled={loading || disabled || !isActive}
+                className={`
                 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/10 px-4 py-2
                 text-xs font-semibold tracking-widest text-rose-100 uppercase transition
                 hover:bg-rose-500/30
                 disabled:cursor-not-allowed disabled:opacity-50
               `}
-            >
-              Revoke (different nonce)
-            </button>
-          </div>
-        ))}
+              >
+                {isActive ? "Revoke" : "Revoke (load matching nonce)"}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {helper && !error && <p className="text-sm text-emerald-200">{helper}</p>}

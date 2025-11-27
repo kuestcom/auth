@@ -442,6 +442,7 @@ export function KeyGenerator() {
           disabled={keyManagementDisabled}
           helper={keysHelper}
           error={keysError}
+          activeKey={bundle?.apiKey ?? null}
         />
       )}
 
