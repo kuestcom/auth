@@ -9,7 +9,7 @@
     "lint": "eslint . --fix"
   },
   "dependencies": {
-    "@reown/appkit": "1.8.14",
+    "@reown/appkit": "1.8.15",
     "@reown/appkit-adapter-wagmi": "1.8.15",
     "@supabase/supabase-js": "2.87.1",
     "@tanstack/react-query": "5.90.12",
