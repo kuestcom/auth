@@ -175,29 +175,46 @@ async function requestKuestKey(
 
 export async function createKuestKey(input: CreateKuestKeyInput) {
   const targets = getKuestBaseUrls()
-  let firstSuccess: Omit<KeyBundle, 'address'> | null = null
-  let lastError: Error | null = null
+  const results = await Promise.allSettled(
+    targets.map(baseUrl => requestKuestKey(baseUrl, input)),
+  )
 
-  for (const baseUrl of targets) {
-    try {
-      const result = await requestKuestKey(baseUrl, input)
-      if (!firstSuccess) {
-        firstSuccess = result
-      }
-    }
-    catch (error) {
-      const normalized
-        = error instanceof Error ? error : new Error(String(error))
-      lastError = normalized
-      // already logged inside requestKuestKey
-    }
+  const successes = results
+    .filter(
+      (result): result is PromiseFulfilledResult<Omit<KeyBundle, 'address'>>
+        => result.status === 'fulfilled',
+    )
+    .map(result => result.value)
+  const failures = results.filter(
+    (result): result is PromiseRejectedResult => result.status === 'rejected',
+  )
+
+  if (failures.length > 0) {
+    const normalized = failures[0].reason instanceof Error
+      ? failures[0].reason
+      : new Error(String(failures[0].reason))
+    const prefix = failures.length === targets.length
+      ? 'Failed to generate API key.'
+      : 'Failed to generate API key on all services.'
+    throw new Error(`${prefix} ${normalized.message}`)
   }
 
-  if (firstSuccess) {
-    return firstSuccess
+  if (successes.length === 0) {
+    throw new Error('Failed to generate API key.')
   }
 
-  throw lastError ?? new Error('Failed to generate API key.')
+  const [first, ...rest] = successes
+  const mismatch = rest.find(value => (
+    value.apiKey !== first.apiKey
+      || value.apiSecret !== first.apiSecret
+      || value.passphrase !== first.passphrase
+  ))
+
+  if (mismatch) {
+    throw new Error('Kuest services returned mismatched API credentials.')
+  }
+
+  return first
 }
 
 function buildHeaders(options: {
