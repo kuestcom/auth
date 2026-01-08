@@ -179,18 +179,24 @@ export async function createKuestKey(input: CreateKuestKeyInput) {
     targets.map(baseUrl => requestKuestKey(baseUrl, input)),
   )
 
-  const successes = results
-    .filter(result => result.status === 'fulfilled')
-    as PromiseFulfilledResult<Omit<KeyBundle, 'address'>>[]
-  const failures = results.filter(result => result.status === 'rejected')
-    as PromiseRejectedResult[]
+  const values: Array<Omit<KeyBundle, 'address'>> = []
+  const failures: Error[] = []
 
-  const values = successes.map(result => result.value)
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      values.push(result.value)
+    }
+    else {
+      failures.push(
+        result.reason instanceof Error
+          ? result.reason
+          : new Error(String(result.reason)),
+      )
+    }
+  }
 
   if (failures.length > 0) {
-    const normalized = failures[0].reason instanceof Error
-      ? failures[0].reason
-      : new Error(String(failures[0].reason))
+    const normalized = failures[0]
     const prefix = failures.length === targets.length
       ? 'Failed to generate API key.'
       : 'Failed to generate API key on all services.'
