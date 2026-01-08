@@ -112,23 +112,9 @@ function normalizeKeyBundle(payload: unknown): Omit<KeyBundle, 'address'> {
     return undefined
   }
 
-  const apiKey = readFirst('apiKey', 'api_key', 'key', 'id')
-  const apiSecret = readFirst(
-    'apiSecret',
-    'api_secret',
-    'apiSecretBase64',
-    'api_secret_base64',
-    'secret',
-    'secretKey',
-    'secret_key',
-  )
-  const passphrase = readFirst(
-    'passphrase',
-    'api_passphrase',
-    'passphraseHex',
-    'passphrase_hex',
-    'api_passphrase_hex',
-  )
+  const apiKey = readFirst('apiKey')
+  const apiSecret = readFirst('secret')
+  const passphrase = readFirst('passphrase')
 
   if (!apiKey || !apiSecret || !passphrase) {
     const keys = Object.keys(record).join(', ') || 'none'
