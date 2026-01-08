@@ -180,14 +180,12 @@ export async function createKuestKey(input: CreateKuestKeyInput) {
   )
 
   const successes = results
-    .filter(
-      (result): result is PromiseFulfilledResult<Omit<KeyBundle, 'address'>>
-        => result.status === 'fulfilled',
-    )
-    .map(result => result.value)
-  const failures = results.filter(
-    (result): result is PromiseRejectedResult => result.status === 'rejected',
-  )
+    .filter(result => result.status === 'fulfilled')
+    as PromiseFulfilledResult<Omit<KeyBundle, 'address'>>[]
+  const failures = results.filter(result => result.status === 'rejected')
+    as PromiseRejectedResult[]
+
+  const values = successes.map(result => result.value)
 
   if (failures.length > 0) {
     const normalized = failures[0].reason instanceof Error
@@ -199,11 +197,11 @@ export async function createKuestKey(input: CreateKuestKeyInput) {
     throw new Error(`${prefix} ${normalized.message}`)
   }
 
-  if (successes.length === 0) {
+  if (values.length === 0) {
     throw new Error('Failed to generate API key.')
   }
 
-  const [first, ...rest] = successes
+  const [first, ...rest] = values
   const mismatch = rest.find(value => (
     value.apiKey !== first.apiKey
       || value.apiSecret !== first.apiSecret
