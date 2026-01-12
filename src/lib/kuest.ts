@@ -210,8 +210,8 @@ export async function createKuestKey(input: CreateKuestKeyInput) {
   const [first, ...rest] = values
   const mismatch = rest.find(value => (
     value.apiKey !== first.apiKey
-      || value.apiSecret !== first.apiSecret
-      || value.passphrase !== first.passphrase
+    || value.apiSecret !== first.apiSecret
+    || value.passphrase !== first.passphrase
   ))
 
   if (mismatch) {
