@@ -19,6 +19,7 @@ export default antfu({
     'react-hooks/set-state-in-effect': 'off',
     'react-hooks-extra/no-direct-set-state-in-use-effect': 'off',
     'func-style': ['error', 'declaration', { allowArrowFunctions: false }],
+    'better-tailwindcss/no-unregistered-classes': 'off',
     'better-tailwindcss/enforce-consistent-line-wrapping': ['error', {
       group: 'newLine',
       preferSingleLine: true,

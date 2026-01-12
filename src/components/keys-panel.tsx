@@ -1,16 +1,16 @@
-"use client";
+'use client'
 
-import { CopyButton } from "@/components/copy-button";
+import { CopyButton } from '@/components/copy-button'
 
 interface KeysPanelProps {
-  keys: string[];
-  onRefresh: () => void;
-  onRevoke: (key: string) => void;
-  loading?: boolean;
-  disabled?: boolean;
-  error?: string | null;
-  helper?: string | null;
-  activeKey?: string | null;
+  keys: string[]
+  onRefresh: () => void
+  onRevoke: (key: string) => void
+  loading?: boolean
+  disabled?: boolean
+  error?: string | null
+  helper?: string | null
+  activeKey?: string | null
 }
 
 export function KeysPanel({
@@ -24,7 +24,7 @@ export function KeysPanel({
   activeKey = null,
 }: KeysPanelProps) {
   if (keys.length === 0) {
-    return null;
+    return null
   }
 
   return (
@@ -45,17 +45,17 @@ export function KeysPanel({
             rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold tracking-[0.2em]
             text-foreground uppercase transition
             hover:bg-muted/60
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50
+            focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
             disabled:cursor-not-allowed disabled:opacity-50
           `}
         >
-          {loading ? "Loading…" : "Refresh"}
+          {loading ? 'Loading…' : 'Refresh'}
         </button>
       </header>
 
       <div className="space-y-3">
         {keys.map((key) => {
-          const isActive = activeKey === key;
+          const isActive = activeKey === key
           return (
             <div
               key={key}
@@ -77,25 +77,25 @@ export function KeysPanel({
                 title={
                   isActive
                     ? undefined
-                    : "This API key was minted with a different nonce."
+                    : 'This API key was minted with a different nonce.'
                 }
                 className={`
-                  inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1 text-xs
-                  font-semibold tracking-[0.2em] text-foreground uppercase transition
+                  inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1
+                  text-xs font-semibold tracking-[0.2em] text-foreground uppercase transition
                   hover:bg-destructive/10 hover:text-destructive
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50
+                  focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
                   disabled:cursor-not-allowed disabled:opacity-50
                 `}
               >
-                {isActive ? "Revoke" : "Different nonce"}
+                {isActive ? 'Revoke' : 'Different nonce'}
               </button>
             </div>
-          );
+          )
         })}
       </div>
 
       {helper && !error && <p className="text-sm text-emerald-700">{helper}</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </section>
-  );
+  )
 }

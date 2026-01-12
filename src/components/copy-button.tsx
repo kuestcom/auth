@@ -34,7 +34,7 @@ export function CopyButton({ value, size = 'md', className = '', ariaLabel = 'Co
         inline-flex items-center justify-center rounded-md border border-border bg-background p-2 text-foreground
         transition
         hover:bg-muted/60
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50
+        focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
         ${className}
       `}
       aria-label={ariaLabel}
