@@ -1,5 +1,11 @@
 {
-  "name": "auth",
+  "name": "kuest-auth",
+  "private": true,
+  "description": "Generate and manage Kuest API credentials.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kuestcom/auth.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -22,10 +28,10 @@
   "devDependencies": {
     "@antfu/eslint-config": "^6.7.1",
     "@eslint-react/eslint-plugin": "^2.5.0",
-    "@next/eslint-plugin-next": "16.0.10",
+    "@next/eslint-plugin-next": "16.1.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.19.1",
-    "@types/react": "^19.2.6",
+    "@types/react": "^19.2.8",
     "@types/react-dom": "^19",
     "eslint": "^9.39.2",
     "eslint-plugin-better-tailwindcss": "^3.7.8",
