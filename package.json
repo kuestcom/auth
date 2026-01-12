@@ -1,23 +1,22 @@
 {
   "name": "auth",
-  "version": "0.1.0",
-  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "prepare": "husky"
   },
   "dependencies": {
-    "@reown/appkit": "1.8.15",
-    "@reown/appkit-adapter-wagmi": "1.8.15",
+    "@reown/appkit": "1.8.16",
+    "@reown/appkit-adapter-wagmi": "1.8.16",
     "@supabase/supabase-js": "2.89.0",
     "@tanstack/react-query": "5.90.16",
     "lucide-react": "0.561.0",
     "next": "16.1.1",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
-    "viem": "2.43.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "viem": "2.44.1",
     "wagmi": "2.19.5"
   },
   "devDependencies": {
@@ -32,10 +31,15 @@
     "eslint-plugin-better-tailwindcss": "^3.7.8",
     "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.4.26",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3"
   },
   "overrides": {
     "pino": "^10.0.0"
+  },
+  "lint-staged": {
+    "*": "eslint --fix"
   }
 }

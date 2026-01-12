@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 
-import { AppProviders } from '@/providers/app-providers'
 import { openSauceOne } from '@/lib/fonts'
-
+import { AppProviders } from '@/providers/app-providers'
 import './globals.css'
 
 export const metadata: Metadata = {
