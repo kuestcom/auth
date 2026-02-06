@@ -37,7 +37,7 @@
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19",
     "eslint": "^9.39.2",
-    "eslint-plugin-better-tailwindcss": "^3.8.0",
+    "eslint-plugin-better-tailwindcss": "^4.1.1",
     "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.4.26",
     "husky": "^9.1.7",
