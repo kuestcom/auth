@@ -1,6 +1,7 @@
 {
   "name": "kuest-auth",
   "private": true,
+  "packageManager": "npm@11.6.2",
   "description": "Generate and manage Kuest API credentials.",
   "repository": {
     "type": "git",
@@ -37,16 +38,13 @@
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19",
     "eslint": "^9.39.2",
-    "eslint-plugin-better-tailwindcss": "^3.8.0",
+    "eslint-plugin-better-tailwindcss": "^4.1.1",
     "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.4.26",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3"
-  },
-  "overrides": {
-    "pino": "^10.0.0"
   },
   "lint-staged": {
     "*": "eslint --fix"

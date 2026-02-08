@@ -87,8 +87,8 @@ export function EnvBlock({ bundle }: EnvBlockProps) {
           readOnly
           rows={4}
           className={`
-            w-full resize-none rounded-md border border-border bg-input p-3 font-mono text-xs leading-relaxed
-            text-foreground outline-none
+            w-full resize-none rounded-md border border-border bg-input p-3 font-mono text-xs/relaxed text-foreground
+            outline-none
           `}
         />
       </div>
