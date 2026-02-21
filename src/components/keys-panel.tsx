@@ -28,13 +28,12 @@ export function KeysPanel({
   }
 
   return (
-    <section className="space-y-4 rounded-xl border border-border/60 bg-card/80 p-6 shadow-sm">
+    <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-foreground">My keys</h3>
           <p className="text-sm text-muted-foreground">
-            Active Kuest API keys. Revoking disables access immediately for
-            loaded credentials.
+            Active Kuest API keys.
           </p>
         </div>
         <button
@@ -60,7 +59,7 @@ export function KeysPanel({
             <div
               key={key}
               className={`
-                flex flex-col gap-3 rounded-md border border-border bg-input/60 p-4 text-sm text-foreground
+                flex flex-col gap-3 rounded-md border border-border p-4 text-sm text-foreground
                 md:flex-row md:items-center md:justify-between
               `}
             >

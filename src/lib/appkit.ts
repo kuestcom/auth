@@ -10,6 +10,7 @@ if (!projectId) {
 
 const defaultAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://auth.kuest.com'
 const appIconUrl = process.env.NEXT_PUBLIC_APP_ICON ?? `${defaultAppUrl}/kuest-logo.svg`
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kuest'
 const metamaskWalletId = 'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96'
 
 export const networks = [polygon, polygonAmoy] as [AppKitNetwork, ...AppKitNetwork[]]
@@ -24,8 +25,8 @@ export const wagmiAdapter = new WagmiAdapter({
 export const wagmiConfig = wagmiAdapter.wagmiConfig
 
 export const appKitMetadata = {
-  name: 'Kuest Auth',
-  description: 'Generate Kuest API credentials.',
+  name: `${siteName} Auth`,
+  description: `Generate ${siteName} API credentials.`,
   url: defaultAppUrl,
   icons: [
     appIconUrl,
@@ -33,8 +34,9 @@ export const appKitMetadata = {
 }
 
 export const appKitThemeVariables = {
-  '--w3m-font-family': 'var(--font-sans, "Open Sauce One", sans-serif)',
-  '--w3m-accent': '#3b82f6',
+  '--w3m-font-family': 'var(--font-sans)',
+  '--w3m-border-radius-master': '2px',
+  '--w3m-accent': 'var(--primary)',
 } as const
 
 export const appKitFeatures = {

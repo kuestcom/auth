@@ -4,10 +4,12 @@ import { openSauceOne } from '@/lib/fonts'
 import { AppProviders } from '@/providers/app-providers'
 import './globals.css'
 
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kuest'
+
 export const metadata: Metadata = {
-  title: 'Kuest API Key Generator',
+  title: `${siteName} API Key Generator`,
   description:
-    'Connect your wallet to mint Kuest API credentials and manage keys in seconds.',
+    `Connect your wallet to mint ${siteName} API credentials and manage keys in seconds.`,
   icons: {
     icon: '/kuest-logo.svg',
     shortcut: '/kuest-logo.svg',
@@ -28,8 +30,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${openSauceOne.variable} dark`} suppressHydrationWarning>
-      <body className="flex min-h-screen flex-col font-sans antialiased">
+    <html
+      lang="en"
+      className={openSauceOne.variable}
+      data-theme-mode="dark"
+      suppressHydrationWarning
+    >
+      <body className="flex min-h-screen flex-col font-sans">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

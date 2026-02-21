@@ -15,6 +15,8 @@ Configure these before running locally or deploying to Vercel:
 
 | Variable | Description |
 | --- | --- |
+| `NEXT_PUBLIC_KUEST_CHAIN_MODE` | Required signing chain: `amoy` (default) or `polygon` |
+| `NEXT_PUBLIC_SITE_NAME` | Brand name shown in header and wallet metadata |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon service key |
 | `NEXT_PUBLIC_REOWN_APPKIT_PROJECT_ID` | Reown / WalletConnect v2 project id (enables QR wallets) |
@@ -24,6 +26,8 @@ Configure these before running locally or deploying to Vercel:
 Use `.env.example` as a starting point and create a `.env.local` file (Next.js automatically loads it):
 
 ```bash
+NEXT_PUBLIC_KUEST_CHAIN_MODE=amoy
+NEXT_PUBLIC_SITE_NAME=Kuest
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_REOWN_APPKIT_PROJECT_ID=...
@@ -50,10 +54,10 @@ npm run dev
 
 Open `http://localhost:3000` and connect a Polygon (Mainnet 137 or Amoy 80002) wallet. The generate flow will:
 
-1. Step 1 (modal): collect an optional email + advanced nonce.
-2. Step 2 (modal): connect via injected wallets or Reown (WalletConnect v2), switch to Polygon 137/80002 if needed, and sign the EIP-712 `ClobAuthDomain` payload.
-3. `POST /auth/api-key` with the L1 signature headers, return the trio, and copy helpers for `.env`.
-4. If an email was provided, store `{ api_key, email }` in Supabase.
+1. Connect wallet via Reown (WalletConnect v2).
+2. Switch to the required chain (`NEXT_PUBLIC_KUEST_CHAIN_MODE`; default `amoy`).
+3. Sign the EIP-712 `ClobAuthDomain` payload and mint API credentials.
+4. If an email was provided in advanced options, store `{ api_key, email }` in Supabase.
 5. Manage keys (list / revoke) via L2 HMAC signing (`timestamp + method + path(+query) + body`).
 
 ### Deploying

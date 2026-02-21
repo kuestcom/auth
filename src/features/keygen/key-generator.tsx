@@ -1,8 +1,13 @@
 'use client'
 
 import type { KeyBundle } from '@/types/keygen'
-import { ArrowLeftIcon, ChevronDownIcon, XIcon } from 'lucide-react'
-import Image from 'next/image'
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  Loader2Icon,
+  WalletIcon,
+  XIcon,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { UserRejectedRequestError } from 'viem'
 import {
@@ -14,6 +19,7 @@ import {
 import { polygon, polygonAmoy } from 'wagmi/chains'
 import { EnvBlock } from '@/components/env-block'
 import { KeysPanel } from '@/components/keys-panel'
+import { SiteLogoIcon } from '@/components/site-logo-icon'
 import { useAppKit } from '@/hooks/useAppKit'
 import { shortenAddress } from '@/lib/format'
 import {
@@ -23,12 +29,151 @@ import {
 } from '@/lib/kuest'
 import { createSupabaseClient } from '@/lib/supabase'
 
-const supportedChains = [polygon, polygonAmoy]
-const supportedChainIds = new Set<number>(
-  supportedChains.map(chain => chain.id),
-)
 const EMAIL_STORAGE_KEY = 'kuest-email'
 const EMAIL_STORAGE_TTL = 1000 * 60 * 60 * 24 * 3 // 3 days
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME?.trim() || 'Kuest'
+const TARGET_CHAIN_MODE
+  = process.env.NEXT_PUBLIC_KUEST_CHAIN_MODE === 'polygon'
+    ? 'polygon'
+    : 'amoy'
+const REQUIRED_CHAIN = TARGET_CHAIN_MODE === 'polygon' ? polygon : polygonAmoy
+const REQUIRED_CHAIN_ID = REQUIRED_CHAIN.id
+const REQUIRED_CHAIN_LABEL = TARGET_CHAIN_MODE === 'polygon'
+  ? 'Polygon Mainnet (137)'
+  : 'Polygon Amoy Testnet (80002)'
+const AMOY_CHAIN_HEX = `0x${polygonAmoy.id.toString(16)}`
+const AMOY_ADD_PARAMS = {
+  chainId: AMOY_CHAIN_HEX,
+  chainName: 'Polygon Amoy Testnet',
+  nativeCurrency: {
+    name: 'POL',
+    symbol: 'POL',
+    decimals: 18,
+  },
+  rpcUrls: ['https://rpc-amoy.polygon.technology/'],
+  blockExplorerUrls: ['https://amoy.polygonscan.com/'],
+}
+
+interface Eip1193Provider {
+  request: (args: { method: string, params?: unknown[] }) => Promise<unknown>
+}
+
+interface ErrorWithCode extends Error {
+  code?: number
+  cause?: unknown
+}
+
+interface ActionPromptProps {
+  open: boolean
+  title: string
+  description: string
+  allowClose?: boolean
+  onClose?: () => void
+}
+
+function getInjectedProvider(): Eip1193Provider | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const maybeProvider = (
+    window as Window & { ethereum?: Eip1193Provider }
+  ).ethereum
+
+  if (!maybeProvider || typeof maybeProvider.request !== 'function') {
+    return null
+  }
+
+  return maybeProvider
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+  return fallback
+}
+
+function isMissingChainError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const candidate = error as ErrorWithCode
+  const cause = candidate.cause as { code?: number, message?: string } | undefined
+  const message = candidate.message.toLowerCase()
+  const causeMessage = cause?.message?.toLowerCase() ?? ''
+
+  return candidate.code === 4902
+    || cause?.code === 4902
+    || message.includes('4902')
+    || causeMessage.includes('4902')
+    || message.includes('unrecognized chain')
+    || causeMessage.includes('unrecognized chain')
+}
+
+function ActionPrompt({
+  open,
+  title,
+  description,
+  allowClose = false,
+  onClose,
+}: ActionPromptProps) {
+  if (!open) {
+    return null
+  }
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-background/85 px-4 py-6 backdrop-blur-md">
+      <div className={`
+        relative w-full max-w-sm rounded-2xl border border-border/70 bg-background p-6 text-center shadow-2xl
+      `}
+      >
+        {allowClose && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className={`
+              absolute top-4 right-4 rounded-md border border-border p-2 text-muted-foreground transition
+              hover:bg-muted/60 hover:text-foreground
+            `}
+            aria-label="Close waiting modal"
+          >
+            <XIcon className="size-4" />
+          </button>
+        )}
+
+        <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+
+        <div className="mt-5 flex justify-center">
+          <div className="relative size-36 overflow-hidden rounded-[30px] bg-background text-primary">
+            <div className={`
+              pointer-events-none absolute inset-0 animate-[spin_1500ms_linear_infinite]
+              bg-[conic-gradient(from_0deg,transparent_0deg,transparent_288deg,currentColor_320deg,currentColor_350deg,transparent_360deg)]
+            `}
+            />
+            <div className="absolute inset-[3px] rounded-[26px] bg-background" />
+            <div className="relative flex size-full items-center justify-center">
+              <div className={`
+                flex size-[88%] items-center justify-center rounded-[22px] border border-primary/20 bg-primary/10
+                shadow-[0_0_40px_-14px_rgba(240,185,11,0.8)]
+              `}
+              >
+                <WalletIcon className="size-16 text-primary" strokeWidth={1.7} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-foreground">
+          <Loader2Icon className="size-4 animate-spin text-primary" />
+          <span>Waiting for wallet approval...</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function KeyGenerator() {
   const account = useAccount()
@@ -39,9 +184,9 @@ export function KeyGenerator() {
 
   const isConnected
     = account.status === 'connected' && Boolean(account.address)
-  const onAllowedChain
+  const onRequiredChain
     = isConnected && account.chainId !== undefined
-      ? supportedChainIds.has(account.chainId)
+      ? account.chainId === REQUIRED_CHAIN_ID
       : false
 
   const [nonce, setNonce] = useState('0')
@@ -50,15 +195,17 @@ export function KeyGenerator() {
   const [keysLoading, setKeysLoading] = useState(false)
   const [keysError, setKeysError] = useState<string | null>(null)
   const [keysHelper, setKeysHelper] = useState<string | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalStep, setModalStep] = useState<1 | 2>(1)
   const [emailDraft, setEmailDraft] = useState('')
-  const [modalAdvancedOpen, setModalAdvancedOpen] = useState(false)
-  const [modalError, setModalError] = useState<string | null>(null)
-  const [modalInfo, setModalInfo] = useState<string | null>(null)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [flowError, setFlowError] = useState<string | null>(null)
+  const [flowInfo, setFlowInfo] = useState<string | null>(null)
   const [isSigning, setIsSigning] = useState(false)
+  const [isEnsuringNetwork, setIsEnsuringNetwork] = useState(false)
+  const [connectPromptOpen, setConnectPromptOpen] = useState(false)
+  const [autoProceedAfterConnect, setAutoProceedAfterConnect] = useState(false)
   const [emailNotice, setEmailNotice] = useState<string | null>(null)
   const [nonceInputError, setNonceInputError] = useState<string | null>(null)
+  const [showKeyManagement, setShowKeyManagement] = useState(false)
 
   const keyManagementDisabled = !bundle
 
@@ -90,14 +237,22 @@ export function KeyGenerator() {
   }, [])
 
   useEffect(() => {
-    if (account.status !== 'connected') {
+    if (account.status === 'disconnected') {
       setBundle(null)
       setKeys([])
       setKeysHelper(null)
       setKeysError(null)
       setEmailNotice(null)
+      setConnectPromptOpen(false)
+      setAutoProceedAfterConnect(false)
     }
   }, [account.status])
+
+  useEffect(() => {
+    if (isConnected) {
+      setConnectPromptOpen(false)
+    }
+  }, [isConnected])
 
   function updateEmailDraft(value: string) {
     setEmailDraft(value)
@@ -116,38 +271,153 @@ export function KeyGenerator() {
     }
   }
 
+  function sanitizeNonceInput(value: string) {
+    return value.replace(/\D+/g, '')
+  }
+
   async function handleWalletConnectClick() {
-    setModalError(null)
+    setFlowError(null)
+    setFlowInfo(null)
+    setConnectPromptOpen(true)
+    setAutoProceedAfterConnect(true)
     try {
       await openAppKit()
     }
     catch (error) {
       const message
         = error instanceof Error ? error.message : 'Failed to open wallet modal.'
-      setModalError(message)
+      setFlowError(message)
+      setConnectPromptOpen(false)
+      setAutoProceedAfterConnect(false)
     }
   }
 
-  function sanitizeNonceInput(value: string) {
-    return value.replace(/\D+/g, '')
+  async function handleEnsureRequiredNetwork() {
+    setFlowError(null)
+    setFlowInfo(null)
+
+    if (!isConnected) {
+      setFlowError('Connect a wallet before switching networks.')
+      return false
+    }
+
+    if (onRequiredChain) {
+      setFlowInfo(`${REQUIRED_CHAIN_LABEL} is already active.`)
+      return true
+    }
+
+    setIsEnsuringNetwork(true)
+
+    try {
+      if (!switchChain) {
+        throw new Error(
+          'Automatic network switch is not available for this wallet. Switch manually in wallet settings.',
+        )
+      }
+
+      await switchChain({ chainId: REQUIRED_CHAIN_ID })
+      setFlowInfo(`${REQUIRED_CHAIN_LABEL} is active.`)
+      return true
+    }
+    catch (error) {
+      if (REQUIRED_CHAIN_ID === polygonAmoy.id && isMissingChainError(error)) {
+        try {
+          const provider = getInjectedProvider()
+          if (!provider) {
+            throw new Error(
+              'Auto-add works only with injected wallets (browser extension or in-app browser).',
+            )
+          }
+
+          setFlowInfo('Adding Polygon Amoy to your wallet...')
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [AMOY_ADD_PARAMS],
+          })
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: AMOY_CHAIN_HEX }],
+          })
+          setFlowInfo('Polygon Amoy enabled. You can sign now.')
+          return true
+        }
+        catch (addError) {
+          setFlowError(
+            getErrorMessage(
+              addError,
+              'Unable to add Polygon Amoy automatically. Switch manually in your wallet.',
+            ),
+          )
+          return false
+        }
+      }
+      else {
+        setFlowError(
+          getErrorMessage(error, `Unable to switch to ${REQUIRED_CHAIN_LABEL}.`),
+        )
+        return false
+      }
+    }
+    finally {
+      setIsEnsuringNetwork(false)
+    }
   }
 
-  function handleOpenModal() {
-    setModalOpen(true)
-    setModalStep(1)
-    setModalAdvancedOpen(false)
-    setModalError(null)
-    setModalInfo(null)
-  }
+  useEffect(() => {
+    if (!autoProceedAfterConnect || !isConnected || bundle) {
+      return
+    }
+    if (isEnsuringNetwork || switchStatus === 'pending' || isSigning) {
+      return
+    }
 
-  function handleCloseModal() {
-    setModalOpen(false)
-    setModalStep(1)
-    setModalAdvancedOpen(false)
-    setModalError(null)
-    setModalInfo(null)
-    setIsSigning(false)
-  }
+    if (!onRequiredChain) {
+      handleEnsureRequiredNetwork()
+        .then((ok) => {
+          if (!ok) {
+            setAutoProceedAfterConnect(false)
+          }
+        })
+        .catch(() => {
+          setAutoProceedAfterConnect(false)
+        })
+      return
+    }
+
+    handleSignAndGenerate()
+      .finally(() => {
+        setAutoProceedAfterConnect(false)
+      })
+    // We intentionally react to connection/chain/signing state transitions.
+    // Handler identities are recreated on render and are not used as effect triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoProceedAfterConnect,
+    isConnected,
+    bundle,
+    isEnsuringNetwork,
+    switchStatus,
+    isSigning,
+    onRequiredChain,
+  ])
+
+  useEffect(() => {
+    if (!flowError || typeof window === 'undefined') {
+      return
+    }
+
+    function clearFlowError() {
+      setFlowError(null)
+    }
+
+    window.addEventListener('pointerdown', clearFlowError, { once: true })
+    window.addEventListener('keydown', clearFlowError, { once: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', clearFlowError)
+      window.removeEventListener('keydown', clearFlowError)
+    }
+  }, [flowError])
 
   function getAuthContext() {
     if (!bundle) {
@@ -166,17 +436,15 @@ export function KeyGenerator() {
   }
 
   async function handleSignAndGenerate() {
-    setModalError(null)
-    setModalInfo(null)
+    setFlowError(null)
+    setFlowInfo(null)
 
     if (!account.address || account.chainId === undefined) {
-      setModalError('Connect a wallet before signing.')
+      setFlowError('Connect a wallet before signing.')
       return
     }
-    if (!onAllowedChain) {
-      setModalError(
-        'Switch to Polygon Mainnet (137) or Amoy (80002) to continue.',
-      )
+    if (!onRequiredChain) {
+      setFlowError(`Switch to ${REQUIRED_CHAIN_LABEL} before signing.`)
       return
     }
 
@@ -195,7 +463,7 @@ export function KeyGenerator() {
 
     try {
       setIsSigning(true)
-      setModalInfo('Check your wallet and sign the Kuest attestation.')
+      setFlowInfo('Open your wallet and sign the Kuest attestation.')
 
       const typedData = {
         domain: {
@@ -222,7 +490,7 @@ export function KeyGenerator() {
 
       const signature = await signTypedDataAsync(typedData)
 
-      setModalInfo('Minting your Kuest credentials…')
+      setFlowInfo('Minting your Kuest credentials...')
       const result = await createKuestKey({
         address: account.address,
         signature,
@@ -279,24 +547,23 @@ export function KeyGenerator() {
         updateEmailDraft('')
       }
 
-      setModalInfo(null)
-      handleCloseModal()
+      setFlowInfo(null)
     }
     catch (error) {
       if (error instanceof UserRejectedRequestError) {
-        setModalError('Signature was rejected in your wallet.')
+        setFlowError('Signature was rejected in your wallet.')
       }
       else if (
         error instanceof Error
         && error.message?.includes('Proposal expired')
       ) {
-        setModalError(
+        setFlowError(
           'Wallet session expired. Reopen your wallet and try connecting again.',
         )
         disconnect()
       }
       else {
-        setModalError(
+        setFlowError(
           error instanceof Error
             ? error.message
             : 'Unable to generate keys. Please try again.',
@@ -366,160 +633,224 @@ export function KeyGenerator() {
     }
   }
 
-  const networkMismatch = isConnected && !onAllowedChain
+  const networkActionPending = isEnsuringNetwork || switchStatus === 'pending'
   const canSign
-    = isConnected && onAllowedChain && !isSigning && switchStatus !== 'pending'
+    = isConnected && onRequiredChain && !isSigning && !networkActionPending
+  const chainStepLabel = TARGET_CHAIN_MODE === 'amoy'
+    ? 'Activate Polygon Amoy'
+    : 'Activate Polygon Mainnet'
+  const currentStep = !isConnected
+    ? {
+        number: 1,
+        title: 'Connect your wallet',
+        description: 'This is a signature-only step: no balance required, no funds moved, no gas fees.',
+        actionLabel: isAppKitReady ? 'Connect wallet' : 'Loading...',
+        action: handleWalletConnectClick,
+        disabled: !isAppKitReady,
+      }
+    : !onRequiredChain
+        ? {
+            number: 2,
+            title: chainStepLabel,
+            description: TARGET_CHAIN_MODE === 'amoy'
+              ? 'We will try to switch automatically and add Amoy if needed.'
+              : 'Switch network before signing.',
+            actionLabel: networkActionPending
+              ? 'Switching network...'
+              : TARGET_CHAIN_MODE === 'amoy'
+                ? 'Activate Amoy'
+                : 'Switch network',
+            action: handleEnsureRequiredNetwork,
+            disabled: networkActionPending,
+          }
+        : {
+            number: 3,
+            title: 'Sign to generate API key',
+            description: 'One EIP-712 signature, no funds moved.',
+            actionLabel: isSigning ? 'Waiting for signature...' : 'Sign now',
+            action: handleSignAndGenerate,
+            disabled: !canSign,
+          }
+
+  const steps = [
+    {
+      number: 1,
+      label: 'Connect wallet',
+      done: isConnected || Boolean(bundle),
+    },
+    {
+      number: 2,
+      label: chainStepLabel,
+      done: onRequiredChain || Boolean(bundle),
+    },
+    {
+      number: 3,
+      label: 'Sign message',
+      done: Boolean(bundle),
+    },
+  ]
+  const completedSteps = steps.filter(
+    step => step.done && step.number < currentStep.number,
+  )
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 py-6">
-      <section className="rounded-xl border border-border/60 bg-card/80 p-6 shadow-sm">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className={`
-                flex size-10 items-center justify-center rounded-md border border-border/60 bg-background p-2
-              `}
-              >
-                <Image
-                  src="/kuest-logo.svg"
-                  alt="Kuest logo"
-                  width={36}
-                  height={36}
-                  priority
-                />
-              </div>
-              <p className="text-2xs font-semibold tracking-[0.32em] text-muted-foreground uppercase">
-                KUEST
-              </p>
+    <>
+      <div className="mx-auto w-full max-w-4xl py-6">
+        <section className="w-full rounded-xl border border-border/70 bg-transparent px-6 py-8 sm:px-10">
+          <div className="mb-6 flex justify-center">
+            <div className="flex items-center gap-3 text-foreground">
+              <SiteLogoIcon
+                alt={`${SITE_NAME} logo`}
+                className="size-8"
+                imageClassName="object-contain"
+                size={40}
+              />
+              <span className="text-2xl font-semibold tracking-tight">{SITE_NAME}</span>
             </div>
-            <h2 className="mt-3 text-2xl font-semibold text-foreground md:text-3xl">
-              Generate your API key
-            </h2>
-            <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-              Sign a short EIP-712 message to prove wallet control.
-              {' '}
-              <br />
-              <strong>
-                We can’t access your funds. No wallet balance required.
-              </strong>
-            </p>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenModal}
-            className={`
-              inline-flex items-center justify-center rounded-md bg-primary px-5 py-2 text-sm font-semibold
-              tracking-[0.2em] text-primary-foreground uppercase shadow-sm transition
-              hover:bg-primary/90
-              focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
-            `}
-          >
-            Generate API Key
-          </button>
-        </div>
-      </section>
+          <h1 className="mt-3 text-center text-3xl font-semibold text-foreground sm:text-4xl">
+            Generate API credentials
+          </h1>
 
-      {isConnected && account.address && (
-        <div
-          className={`
-            flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/70 px-4 py-3
-          `}
-        >
-          <span className="text-sm text-muted-foreground">
-            Connected as
-            {' '}
-            <span className="font-mono text-foreground">
-              {shortenAddress(account.address)}
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => disconnect()}
-            disabled={disconnectStatus === 'pending'}
-            className={`
-              inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs
-              font-semibold tracking-[0.2em] text-foreground uppercase transition
-              hover:bg-muted/60
-              focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
-              disabled:cursor-not-allowed disabled:opacity-50
-            `}
-          >
-            Disconnect
-          </button>
-        </div>
-      )}
-
-      <EnvBlock bundle={bundle} />
-      {emailNotice && (
-        <p className="rounded-lg border border-emerald-200/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {emailNotice}
-        </p>
-      )}
-
-      {isConnected && keys.length > 0 && (
-        <KeysPanel
-          keys={keys}
-          onRefresh={handleRefreshKeys}
-          onRevoke={handleRevoke}
-          loading={keysLoading}
-          disabled={keyManagementDisabled}
-          helper={keysHelper}
-          error={keysError}
-          activeKey={bundle?.apiKey ?? null}
-        />
-      )}
-
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 py-6 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-xl border border-border/70 bg-background p-6 shadow-xl">
-            <button
-              type="button"
-              onClick={handleCloseModal}
-              className={`
-                absolute top-4 right-4 rounded-md border border-border bg-background p-2 text-muted-foreground
-                transition
-                hover:bg-muted/60 hover:text-foreground
-              `}
-              aria-label="Close modal"
-            >
-              <XIcon className="size-4" />
-            </button>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <p className="text-xs tracking-[0.28em] text-muted-foreground uppercase">
-                  Kuest API key
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-foreground">
-                  {modalStep === 1 ? 'Email (optional)' : 'Connect & Sign'}
-                </h3>
-              </div>
-              <span className="mt-8 text-xs font-semibold tracking-[0.3em] text-muted-foreground uppercase">
-                Step
-                {' '}
-                {modalStep}
-                {' '}
-                / 2
-              </span>
+          <div className="mt-6 w-full overflow-hidden rounded-2xl border border-border/70">
+            <div className="grid w-full grid-cols-3">
+              {steps.map((step, index) => (
+                <div
+                  key={step.number}
+                  className={`
+                    flex min-w-0 items-center justify-center px-3 py-4 text-center text-xs text-muted-foreground
+                    sm:px-5 sm:text-sm
+                    ${index < steps.length - 1 ? 'border-r border-border/60' : ''}
+                  `}
+                >
+                  <span className="truncate">
+                    {step.number}
+                    .
+                    {' '}
+                    {step.label}
+                  </span>
+                </div>
+              ))}
             </div>
+          </div>
 
-            {modalStep === 1
-              ? (
-                  <form
-                    className="space-y-5"
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      setModalStep(2)
-                      setModalError(null)
-                      setModalInfo(null)
-                    }}
+          {!bundle && (
+            <div className="mt-6 space-y-6">
+              {completedSteps.map(step => (
+                <div
+                  key={step.number}
+                  className="flex items-center justify-between rounded-2xl border border-border/70 px-6 py-4"
+                >
+                  <p className="text-sm font-semibold text-foreground">
+                    {step.number}
+                    .
+                    {' '}
+                    {step.label}
+                  </p>
+                  <div className={`
+                    flex size-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/10
+                  `}
                   >
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="kuest-email"
-                        className="text-xs font-semibold tracking-[0.24em] text-muted-foreground uppercase"
-                      >
-                        Email address
-                      </label>
+                    <CheckIcon className="size-7 text-primary" strokeWidth={2.4} />
+                  </div>
+                </div>
+              ))}
+
+              <div className="rounded-2xl border border-border/70 px-6 py-6">
+                <p className="text-xs font-semibold tracking-[0.28em] text-muted-foreground uppercase">
+                  Step
+                  {' '}
+                  {currentStep.number}
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
+                  {currentStep.title}
+                </h2>
+                <p className="mt-3 text-sm text-muted-foreground sm:text-base">
+                  {currentStep.number === 1
+                    ? (
+                        <>
+                          <a
+                            href="https://metamask.io/download"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`
+                              font-medium text-foreground underline decoration-border underline-offset-4 transition
+                              hover:text-primary
+                            `}
+                          >
+                            MetaMask browser extension
+                          </a>
+                          {' '}
+                          is recommended for the simplest setup.
+                          {' '}
+                          {currentStep.description}
+                        </>
+                      )
+                    : currentStep.description}
+                </p>
+
+                {isConnected && account.address && (
+                  <p className="mt-4 text-xs text-muted-foreground sm:text-sm">
+                    {shortenAddress(account.address)}
+                    {' · '}
+                    {account.chain?.name ?? `Chain ${account.chainId ?? '-'}`}
+                  </p>
+                )}
+
+                <div className="mt-7 flex items-center justify-center">
+                  <div className="relative w-full max-w-sm pb-[5px]">
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-4 rounded-b-xl bg-primary/80" />
+                    <button
+                      type="button"
+                      onClick={currentStep.action}
+                      disabled={currentStep.disabled}
+                      className={`
+                        relative inline-flex w-full translate-y-0 items-center justify-center rounded-xl border
+                        border-transparent bg-primary px-6 py-4 text-sm font-semibold tracking-[0.16em]
+                        text-primary-foreground uppercase transition-transform duration-150 ease-out
+                        hover:translate-y-px hover:bg-primary
+                        focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none
+                        active:translate-y-0.5
+                        disabled:cursor-not-allowed disabled:opacity-55
+                      `}
+                    >
+                      {currentStep.actionLabel}
+                    </button>
+                  </div>
+                </div>
+
+                {flowError && (
+                  <p
+                    className={`
+                      mx-auto mt-4 max-w-sm rounded-lg border border-destructive/30 px-4 py-3 text-sm text-destructive
+                    `}
+                  >
+                    {flowError}
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-border/70 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen(previous => !previous)}
+                  className={`
+                    flex w-full items-center justify-between text-left text-sm font-medium text-foreground transition
+                    hover:text-foreground
+                  `}
+                >
+                  <span>Advanced options</span>
+                  <ChevronDownIcon
+                    className={`size-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {advancedOpen && (
+                  <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
+                    <label htmlFor="kuest-email" className="block space-y-2">
+                      <span className="text-xs font-semibold tracking-[0.24em] text-muted-foreground uppercase">
+                        Email address (optional)
+                      </span>
                       <input
                         id="kuest-email"
                         type="email"
@@ -532,243 +863,144 @@ export function KeyGenerator() {
                           focus-visible:ring-2 focus-visible:ring-ring/40
                         `}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        We only send security-related updates about Kuest.
-                        Optional but recommended.
-                      </p>
-                    </div>
+                    </label>
 
-                    <button
-                      type="button"
-                      onClick={() => setModalAdvancedOpen(previous => !previous)}
-                      className={`
-                        flex w-full items-center justify-between rounded-md border border-border bg-background px-4
-                        py-2.5 text-left text-sm font-medium text-foreground transition
-                        hover:bg-muted/60
-                      `}
-                    >
-                      <span>Advanced settings</span>
-                      <ChevronDownIcon
-                        className={`size-4 transition-transform ${modalAdvancedOpen ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-
-                    {modalAdvancedOpen && (
-                      <div className="space-y-2 rounded-md border border-border bg-muted/30 px-4 py-4">
-                        <label className="flex flex-col gap-2 text-sm text-foreground">
-                          <span className="text-xs font-semibold tracking-[0.24em] text-muted-foreground uppercase">
-                            Nonce
-                          </span>
-                          <input
-                            type="text"
-                            value={nonce}
-                            onChange={(event) => {
-                              setNonceInputError(null)
-                              setNonce(sanitizeNonceInput(event.target.value))
-                            }}
-                            inputMode="numeric"
-                            pattern="\d*"
-                            className={`
-                              rounded-md border border-border bg-background px-3 py-2 font-mono text-sm text-foreground
-                              transition outline-none
-                              focus-visible:ring-2 focus-visible:ring-ring/40
-                            `}
-                            placeholder="0"
-                          />
-                          {nonceInputError && (
-                            <span className="text-xs text-destructive">
-                              {nonceInputError}
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            Leave 0 unless you need a different key. Changing the
-                            nonce derives a new API key.
-                          </span>
-                        </label>
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
-                      <button
-                        type="button"
-                        onClick={handleCloseModal}
-                        className={`
-                          inline-flex items-center justify-center rounded-md border border-border bg-background px-5
-                          py-2 text-sm font-semibold text-foreground transition
-                          hover:bg-muted/60
-                          focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
-                        `}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className={`
-                          inline-flex items-center justify-center rounded-md bg-primary px-6 py-2 text-sm font-semibold
-                          tracking-[0.2em] text-primary-foreground uppercase transition
-                          hover:bg-primary/90
-                          focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
-                        `}
-                      >
-                        Continue
-                      </button>
-                    </div>
-                  </form>
-                )
-              : (
-                  <div className="space-y-6">
-                    <p className="text-sm text-muted-foreground">
-                      Connect your wallet and sign to mint live Kuest API
-                      credentials
-                    </p>
-
-                    <div className="space-y-3">
-                      <button
-                        type="button"
-                        onClick={handleWalletConnectClick}
-                        disabled={!isAppKitReady}
-                        className={`
-                          flex w-full items-center justify-between rounded-md border border-border bg-background px-4
-                          py-3 text-left transition
-                          hover:bg-muted/60
-                          disabled:cursor-not-allowed disabled:opacity-50
-                        `}
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">
-                            WalletConnect (QR / browser)
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Reown modal · mobile & desktop wallets
-                          </p>
-                        </div>
-                        <span className="text-xs font-semibold tracking-[0.28em] text-muted-foreground uppercase">
-                          {!isAppKitReady
-                            ? 'Loading…'
-                            : isConnected
-                              ? 'Connected'
-                              : 'Connect'}
-                        </span>
-                      </button>
-                    </div>
-
-                    {isConnected && (
-                      <div
-                        className={`
-                          flex flex-col gap-3 rounded-md border border-border bg-muted/40 px-4 py-4 text-sm
-                          text-muted-foreground
-                        `}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span>
-                            Connected as
-                            {' '}
-                            <span className="font-mono text-foreground">
-                              {shortenAddress(account.address)}
-                            </span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => disconnect()}
-                            disabled={disconnectStatus === 'pending'}
-                            className={`
-                              rounded-md border border-border bg-background px-3 py-1 text-xs font-semibold
-                              tracking-[0.2em] text-foreground uppercase transition
-                              hover:bg-muted/60
-                              focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
-                              disabled:cursor-not-allowed disabled:opacity-60
-                            `}
-                          >
-                            Disconnect
-                          </button>
-                        </div>
-                        {networkMismatch && (
-                          <div
-                            className={`
-                              space-y-3 rounded-md border border-amber-200/70 bg-amber-50 px-4 py-3 text-xs
-                              text-amber-800
-                            `}
-                          >
-                            <p className="font-medium">
-                              Switch to Polygon Mainnet (137) or Amoy testnet
-                              (80002) before signing.
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {supportedChains.map(chain => (
-                                <button
-                                  key={chain.id}
-                                  type="button"
-                                  onClick={() =>
-                                    switchChain?.({ chainId: chain.id })}
-                                  disabled={switchStatus === 'pending'}
-                                  className={`
-                                    rounded-md border border-border bg-background px-3 py-1 text-xs font-semibold
-                                    text-foreground transition
-                                    hover:bg-muted/60
-                                    disabled:cursor-not-allowed disabled:opacity-50
-                                  `}
-                                >
-                                  {switchStatus === 'pending'
-                                    ? 'Switching…'
-                                    : `Switch to ${chain.name}`}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setModalStep(1)
-                          setModalError(null)
-                          setModalInfo(null)
+                    <label className="flex flex-col gap-2 text-sm text-foreground">
+                      <span className="text-xs font-semibold tracking-[0.24em] text-muted-foreground uppercase">
+                        Nonce
+                      </span>
+                      <input
+                        type="text"
+                        value={nonce}
+                        onChange={(event) => {
+                          setNonceInputError(null)
+                          setNonce(sanitizeNonceInput(event.target.value))
                         }}
+                        inputMode="numeric"
+                        pattern="\d*"
                         className={`
-                          inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition
-                          hover:text-foreground
+                          rounded-md border border-border bg-background px-3 py-2 font-mono text-sm text-foreground
+                          transition outline-none
+                          focus-visible:ring-2 focus-visible:ring-ring/40
                         `}
-                      >
-                        <ArrowLeftIcon className="size-4" />
-                        Back
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSignAndGenerate}
-                        disabled={!canSign}
-                        className={`
-                          inline-flex items-center justify-center rounded-md bg-primary px-6 py-2 text-sm font-semibold
-                          tracking-[0.2em] text-primary-foreground uppercase transition
-                          hover:bg-primary/90
-                          disabled:cursor-not-allowed disabled:opacity-60
-                        `}
-                      >
-                        {isSigning ? 'Signing…' : 'Sign & Generate'}
-                      </button>
-                    </div>
-
-                    {modalInfo && (
-                      <div className="rounded-md border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
-                        {modalInfo}
-                      </div>
-                    )}
-
-                    {modalError && (
-                      <div className={`
-                        rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive
-                      `}
-                      >
-                        {modalError}
-                      </div>
-                    )}
+                        placeholder="0"
+                      />
+                      {nonceInputError && (
+                        <span className="text-xs text-destructive">
+                          {nonceInputError}
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        Leave 0 unless you need a different key.
+                      </span>
+                    </label>
                   </div>
                 )}
-          </div>
-        </div>
-      )}
-    </div>
+              </div>
+            </div>
+          )}
+
+          {flowInfo && (
+            <p className="mt-6 rounded-lg border border-border/70 px-4 py-3 text-sm text-foreground">
+              {flowInfo}
+            </p>
+          )}
+          {emailNotice && (
+            <p className="mt-4 rounded-lg border border-emerald-500/25 px-4 py-3 text-sm text-emerald-700">
+              {emailNotice}
+            </p>
+          )}
+
+          {bundle && (
+            <div className="mt-6 space-y-6">
+              <div className={`
+                mx-auto flex size-24 animate-[auth-success-pop_520ms_ease-out] items-center justify-center rounded-full
+                border border-border/70 bg-background
+              `}
+              >
+                <CheckIcon className="size-12 text-primary" strokeWidth={2.2} />
+              </div>
+              <div className="text-center">
+                <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">
+                  API key generated successfully
+                </h2>
+                <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
+                  Copy the credentials block below and paste it into your `.env` file.
+                </p>
+              </div>
+              <EnvBlock bundle={bundle} />
+            </div>
+          )}
+
+          {isConnected && keys.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-border/70 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setShowKeyManagement(previous => !previous)}
+                className={`
+                  flex w-full items-center justify-between text-left text-sm font-medium text-foreground transition
+                  hover:text-foreground
+                `}
+              >
+                <span>Key Management</span>
+                <ChevronDownIcon
+                  className={`size-4 transition-transform ${showKeyManagement ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {showKeyManagement && (
+                <div className="mt-4 border-t border-border/60 pt-4">
+                  <KeysPanel
+                    keys={keys}
+                    onRefresh={handleRefreshKeys}
+                    onRevoke={handleRevoke}
+                    loading={keysLoading}
+                    disabled={keyManagementDisabled}
+                    helper={keysHelper}
+                    error={keysError}
+                    activeKey={bundle?.apiKey ?? null}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {isConnected && account.address && (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => disconnect()}
+                disabled={disconnectStatus === 'pending'}
+                className={`
+                  inline-flex items-center justify-center rounded-md border border-border px-3 py-1.5 text-xs
+                  font-semibold tracking-[0.2em] text-muted-foreground uppercase transition
+                  hover:text-foreground
+                  disabled:cursor-not-allowed disabled:opacity-50
+                `}
+              >
+                Disconnect
+              </button>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <ActionPrompt
+        open={connectPromptOpen}
+        title="Connecting wallet"
+        description="Open your wallet and approve the connection to continue."
+        allowClose
+        onClose={() => setConnectPromptOpen(false)}
+      />
+
+      <ActionPrompt
+        open={isSigning}
+        title="Waiting for signature"
+        description="Approve the signature in your wallet to generate credentials."
+        allowClose
+        onClose={() => {
+          setIsSigning(false)
+        }}
+      />
+    </>
   )
 }
