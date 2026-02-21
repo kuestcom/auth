@@ -1,6 +1,7 @@
 'use client'
 
 import type { KeyBundle } from '@/types/keygen'
+import { useWalletInfo } from '@reown/appkit/react'
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -8,6 +9,7 @@ import {
   WalletIcon,
   XIcon,
 } from 'lucide-react'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { UserRejectedRequestError } from 'viem'
 import {
@@ -67,6 +69,7 @@ interface ActionPromptProps {
   open: boolean
   title: string
   description: string
+  showConnectedWalletIcon?: boolean
   allowClose?: boolean
   onClose?: () => void
 }
@@ -116,6 +119,7 @@ function ActionPrompt({
   open,
   title,
   description,
+  showConnectedWalletIcon = false,
   allowClose = false,
   onClose,
 }: ActionPromptProps) {
@@ -155,12 +159,8 @@ function ActionPrompt({
             />
             <div className="absolute inset-[3px] rounded-[26px] bg-background" />
             <div className="relative flex size-full items-center justify-center">
-              <div className={`
-                flex size-[88%] items-center justify-center rounded-[22px] border border-primary/20 bg-primary/10
-                shadow-[0_0_40px_-14px_rgba(240,185,11,0.8)]
-              `}
-              >
-                <WalletIcon className="size-16 text-primary" strokeWidth={1.7} />
+              <div className="flex size-[88%] items-center justify-center">
+                {showConnectedWalletIcon ? <ActionPromptWalletIcon /> : <WalletIcon className="size-16 text-primary" strokeWidth={1.7} />}
               </div>
             </div>
           </div>
@@ -172,6 +172,33 @@ function ActionPrompt({
         </div>
       </div>
     </div>
+  )
+}
+
+function ActionPromptWalletIcon() {
+  const { walletInfo } = useWalletInfo()
+  const [walletIconLoadFailed, setWalletIconLoadFailed] = useState(false)
+  const walletName = typeof walletInfo?.name === 'string' ? walletInfo.name : undefined
+  const walletIconUrl = typeof walletInfo?.icon === 'string' ? walletInfo.icon.trim() : ''
+
+  useEffect(() => {
+    setWalletIconLoadFailed(false)
+  }, [walletIconUrl])
+
+  if (!walletIconUrl || walletIconLoadFailed) {
+    return <WalletIcon className="size-16 text-primary" strokeWidth={1.7} />
+  }
+
+  return (
+    <Image
+      src={walletIconUrl}
+      alt={walletName ? `${walletName} wallet icon` : 'Connected wallet icon'}
+      width={64}
+      height={64}
+      unoptimized
+      className="size-16 rounded-2xl object-cover"
+      onError={() => setWalletIconLoadFailed(true)}
+    />
   )
 }
 
@@ -988,6 +1015,7 @@ export function KeyGenerator() {
         open={connectPromptOpen}
         title="Connecting wallet"
         description="Open your wallet and approve the connection to continue."
+        showConnectedWalletIcon={isAppKitReady}
         allowClose
         onClose={() => setConnectPromptOpen(false)}
       />
@@ -996,6 +1024,7 @@ export function KeyGenerator() {
         open={isSigning}
         title="Waiting for signature"
         description="Approve the signature in your wallet to generate credentials."
+        showConnectedWalletIcon={isAppKitReady}
         allowClose
         onClose={() => {
           setIsSigning(false)
