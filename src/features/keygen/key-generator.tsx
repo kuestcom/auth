@@ -129,18 +129,12 @@ function ActionPrompt({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-background/85 px-4 py-6 backdrop-blur-md">
-      <div className={`
-        relative w-full max-w-sm rounded-2xl border border-border/70 bg-background p-6 text-center shadow-2xl
-      `}
-      >
+      <div className="relative w-full max-w-sm auth-panel p-6 text-center">
         {allowClose && onClose && (
           <button
             type="button"
             onClick={onClose}
-            className={`
-              absolute top-4 right-4 rounded-md border border-border p-2 text-muted-foreground transition
-              hover:bg-muted/60 hover:text-foreground
-            `}
+            className="absolute top-4 right-4 auth-icon-button p-2 text-muted-foreground hover:text-foreground"
             aria-label="Close waiting modal"
           >
             <XIcon className="size-4" />
@@ -151,7 +145,7 @@ function ActionPrompt({
         <p className="mt-2 text-sm text-muted-foreground">{description}</p>
 
         <div className="mt-5 flex justify-center">
-          <div className="relative size-36 overflow-hidden rounded-[30px] bg-background text-primary">
+          <div className="relative size-36 overflow-hidden rounded-[30px] bg-card text-primary">
             <div className={`
               pointer-events-none absolute inset-0 animate-[spin_1500ms_linear_infinite]
               bg-[conic-gradient(from_0deg,transparent_0deg,transparent_288deg,currentColor_320deg,currentColor_350deg,transparent_360deg)]
@@ -716,6 +710,7 @@ export function KeyGenerator() {
       done: Boolean(bundle),
     },
   ]
+  const activeStepNumber = bundle ? 3 : currentStep.number
   const completedSteps = steps.filter(
     step => step.done && step.number < currentStep.number,
   )
@@ -723,14 +718,14 @@ export function KeyGenerator() {
   return (
     <>
       <div className="mx-auto w-full max-w-4xl py-6">
-        <section className="w-full rounded-xl border border-border/70 bg-transparent px-6 py-8 sm:px-10">
+        <section className="w-full auth-shell px-6 py-8 sm:px-10">
           <div className="mb-6 flex justify-center">
             <div className="flex items-center gap-3 text-foreground">
               <SiteLogoIcon
                 alt={`${SITE_NAME} logo`}
-                className="size-8"
+                className="size-[1.7rem]"
                 imageClassName="object-contain"
-                size={40}
+                size={32}
               />
               <span className="text-2xl font-semibold tracking-tight">{SITE_NAME}</span>
             </div>
@@ -739,21 +734,22 @@ export function KeyGenerator() {
             Generate API credentials
           </h1>
 
-          <div className="mt-6 w-full overflow-hidden rounded-2xl border border-border/70">
+          <div className="mt-6 w-full auth-stepper">
             <div className="grid w-full grid-cols-3">
-              {steps.map((step, index) => (
+              {steps.map(step => (
                 <div
                   key={step.number}
-                  className={`
-                    flex min-w-0 items-center justify-center px-3 py-4 text-center text-xs text-muted-foreground
-                    sm:px-5 sm:text-sm
-                    ${index < steps.length - 1 ? 'border-r border-border/60' : ''}
-                  `}
+                  data-state={
+                    step.number === activeStepNumber
+                      ? 'active'
+                      : step.done
+                        ? 'done'
+                        : 'idle'
+                  }
+                  className="auth-step text-center text-xs sm:text-sm"
                 >
+                  <span className="auth-step-index shrink-0">{step.number}</span>
                   <span className="truncate">
-                    {step.number}
-                    .
-                    {' '}
                     {step.label}
                   </span>
                 </div>
@@ -766,7 +762,7 @@ export function KeyGenerator() {
               {completedSteps.map(step => (
                 <div
                   key={step.number}
-                  className="flex items-center justify-between rounded-2xl border border-border/70 px-6 py-4"
+                  className="flex items-center justify-between auth-subpanel px-6 py-4"
                 >
                   <p className="text-sm font-semibold text-foreground">
                     {step.number}
@@ -775,15 +771,16 @@ export function KeyGenerator() {
                     {step.label}
                   </p>
                   <div className={`
-                    flex size-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/10
+                    flex size-12 items-center justify-center rounded-full border border-white/70 bg-white
+                    text-background shadow-[0_12px_28px_rgba(0,0,0,0.18)]
                   `}
                   >
-                    <CheckIcon className="size-7 text-primary" strokeWidth={2.4} />
+                    <CheckIcon className="size-7" strokeWidth={2.4} />
                   </div>
                 </div>
               ))}
 
-              <div className="rounded-2xl border border-border/70 px-6 py-6">
+              <div className="auth-panel px-6 py-6">
                 <p className="text-xs font-semibold tracking-[0.28em] text-muted-foreground uppercase">
                   Step
                   {' '}
@@ -800,10 +797,7 @@ export function KeyGenerator() {
                             href="https://metamask.io/download"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`
-                              font-medium text-foreground underline decoration-border underline-offset-4 transition
-                              hover:text-primary
-                            `}
+                            className="font-medium auth-link"
                           >
                             MetaMask browser extension
                           </a>
@@ -825,20 +819,15 @@ export function KeyGenerator() {
                 )}
 
                 <div className="mt-7 flex items-center justify-center">
-                  <div className="relative w-full max-w-sm pb-[5px]">
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-4 rounded-b-xl bg-primary/80" />
+                  <div className="w-full max-w-sm">
                     <button
                       type="button"
                       onClick={currentStep.action}
                       disabled={currentStep.disabled}
                       className={`
-                        relative inline-flex w-full translate-y-0 items-center justify-center rounded-xl border
-                        border-transparent bg-primary px-6 py-4 text-sm font-semibold tracking-[0.16em]
-                        text-primary-foreground uppercase transition-transform duration-150 ease-out
-                        hover:translate-y-px hover:bg-primary
-                        focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none
-                        active:translate-y-0.5
-                        disabled:cursor-not-allowed disabled:opacity-55
+                        inline-flex w-full items-center justify-center auth-cta px-6 py-4 text-sm font-semibold
+                        tracking-[0.16em] uppercase
+                        focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none
                       `}
                     >
                       {currentStep.actionLabel}
@@ -849,7 +838,7 @@ export function KeyGenerator() {
                 {flowError && (
                   <p
                     className={`
-                      mx-auto mt-4 max-w-sm rounded-lg border border-destructive/30 px-4 py-3 text-sm text-destructive
+                      mx-auto mt-4 max-w-sm auth-feedback auth-feedback-error px-4 py-3 text-sm text-destructive
                     `}
                   >
                     {flowError}
@@ -857,7 +846,7 @@ export function KeyGenerator() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-border/70 px-5 py-4">
+              <div className="auth-subpanel px-5 py-4">
                 <button
                   type="button"
                   onClick={() => setAdvancedOpen(previous => !previous)}
@@ -884,11 +873,7 @@ export function KeyGenerator() {
                         value={emailDraft}
                         onChange={event => updateEmailDraft(event.target.value)}
                         placeholder="you@team.com"
-                        className={`
-                          w-full rounded-md border border-border bg-input px-4 py-2.5 text-sm text-foreground transition
-                          outline-none
-                          focus-visible:ring-2 focus-visible:ring-ring/40
-                        `}
+                        className="w-full auth-input px-4 py-2.5 text-sm"
                       />
                     </label>
 
@@ -905,11 +890,7 @@ export function KeyGenerator() {
                         }}
                         inputMode="numeric"
                         pattern="\d*"
-                        className={`
-                          rounded-md border border-border bg-background px-3 py-2 font-mono text-sm text-foreground
-                          transition outline-none
-                          focus-visible:ring-2 focus-visible:ring-ring/40
-                        `}
+                        className="auth-input px-3 py-2 font-mono text-sm"
                         placeholder="0"
                       />
                       {nonceInputError && (
@@ -928,12 +909,12 @@ export function KeyGenerator() {
           )}
 
           {flowInfo && (
-            <p className="mt-6 rounded-lg border border-border/70 px-4 py-3 text-sm text-foreground">
+            <p className="mt-6 auth-feedback px-4 py-3 text-sm text-foreground">
               {flowInfo}
             </p>
           )}
           {emailNotice && (
-            <p className="mt-4 rounded-lg border border-emerald-500/25 px-4 py-3 text-sm text-emerald-700">
+            <p className="mt-4 auth-feedback auth-feedback-success px-4 py-3 text-sm">
               {emailNotice}
             </p>
           )}
@@ -942,10 +923,10 @@ export function KeyGenerator() {
             <div className="mt-6 space-y-6">
               <div className={`
                 mx-auto flex size-24 animate-[auth-success-pop_520ms_ease-out] items-center justify-center rounded-full
-                border border-border/70 bg-background
+                border border-white/70 bg-white text-background shadow-[0_18px_40px_rgba(0,0,0,0.22)]
               `}
               >
-                <CheckIcon className="size-12 text-primary" strokeWidth={2.2} />
+                <CheckIcon className="size-12" strokeWidth={2.2} />
               </div>
               <div className="text-center">
                 <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">
@@ -960,7 +941,7 @@ export function KeyGenerator() {
           )}
 
           {isConnected && keys.length > 0 && (
-            <div className="mt-6 rounded-2xl border border-border/70 px-5 py-4">
+            <div className="mt-6 auth-subpanel px-5 py-4">
               <button
                 type="button"
                 onClick={() => setShowKeyManagement(previous => !previous)}
@@ -998,10 +979,9 @@ export function KeyGenerator() {
                 onClick={() => disconnect()}
                 disabled={disconnectStatus === 'pending'}
                 className={`
-                  inline-flex items-center justify-center rounded-md border border-border px-3 py-1.5 text-xs
-                  font-semibold tracking-[0.2em] text-muted-foreground uppercase transition
+                  inline-flex items-center justify-center auth-secondary-button px-3 py-1.5 text-xs font-semibold
+                  tracking-[0.2em] text-muted-foreground uppercase
                   hover:text-foreground
-                  disabled:cursor-not-allowed disabled:opacity-50
                 `}
               >
                 Disconnect

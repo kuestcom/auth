@@ -38,10 +38,7 @@ export function EnvBlock({ bundle }: EnvBlockProps) {
         value={credentialsBlock}
         readOnly
         rows={6}
-        className={`
-          w-full resize-none rounded-xl border border-border/70 bg-background/70 px-4 pt-12 pb-4 font-mono
-          text-xs/relaxed text-foreground outline-none
-        `}
+        className="w-full resize-none auth-code-block px-4 pt-12 pb-4 font-mono text-xs/relaxed outline-none"
       />
     </div>
   )

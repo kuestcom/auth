@@ -40,13 +40,7 @@ export function KeysPanel({
           type="button"
           onClick={onRefresh}
           disabled={loading || disabled}
-          className={`
-            rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold tracking-[0.2em]
-            text-foreground uppercase transition
-            hover:bg-muted/60
-            focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
-            disabled:cursor-not-allowed disabled:opacity-50
-          `}
+          className="auth-secondary-button px-3 py-1.5 text-xs font-semibold tracking-[0.2em] uppercase"
         >
           {loading ? 'Loading…' : 'Refresh'}
         </button>
@@ -59,7 +53,7 @@ export function KeysPanel({
             <div
               key={key}
               className={`
-                flex flex-col gap-3 rounded-md border border-border p-4 text-sm text-foreground
+                flex flex-col gap-3 auth-subpanel p-4 text-sm text-foreground
                 md:flex-row md:items-center md:justify-between
               `}
             >
@@ -79,11 +73,9 @@ export function KeysPanel({
                     : 'This API key was minted with a different nonce.'
                 }
                 className={`
-                  inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1
-                  text-xs font-semibold tracking-[0.2em] text-foreground uppercase transition
-                  hover:bg-destructive/10 hover:text-destructive
-                  focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none
-                  disabled:cursor-not-allowed disabled:opacity-50
+                  inline-flex items-center justify-center auth-secondary-button px-3 py-1 text-xs font-semibold
+                  tracking-[0.2em] uppercase
+                  enabled:hover:border-destructive/40 enabled:hover:bg-destructive/10 enabled:hover:text-destructive
                 `}
               >
                 {isActive ? 'Revoke' : 'Different nonce'}
@@ -93,7 +85,7 @@ export function KeysPanel({
         })}
       </div>
 
-      {helper && !error && <p className="text-sm text-emerald-700">{helper}</p>}
+      {helper && !error && <p className="text-sm text-emerald-300">{helper}</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </section>
   )
