@@ -17,7 +17,7 @@ export function CopyButton({ value, size = 'md', className = '', ariaLabel = 'Co
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      setTimeout(setCopied, 1500, false)
     }
     catch (error) {
       console.error('Copy failed', error)

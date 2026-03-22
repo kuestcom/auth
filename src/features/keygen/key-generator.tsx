@@ -128,7 +128,7 @@ function ActionPrompt({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-background/85 px-4 py-6 backdrop-blur-md">
+    <div className="fixed inset-0 z-80 flex items-center justify-center bg-background/85 px-4 py-6 backdrop-blur-md">
       <div className="relative w-full max-w-sm auth-panel p-6 text-center">
         {allowClose && onClose && (
           <button
@@ -780,7 +780,7 @@ export function KeyGenerator() {
                 </div>
               ))}
 
-              <div className="auth-panel px-6 py-6">
+              <div className="auth-panel p-6">
                 <p className="text-xs font-semibold tracking-[0.28em] text-muted-foreground uppercase">
                   Step
                   {' '}
