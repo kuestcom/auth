@@ -1,13 +1,9 @@
-## Kuest Auth – Key Generator
+<h1 align="center">
+  <img src="https://github.com/user-attachments/assets/0cc687fb-89c4-43fa-a056-d89c307215ad" alt="Kuest" height="96" /><br/>
+  Kuest Auth Key Generator
+</h1>
 
-Single-page app that lets a Kuest wallet owner mint API credentials (L1 signature) and manage keys (L2 HMAC) against `https://clob.kuest.com`. Built with Next.js 14 (App Router), TypeScript, Tailwind CSS, wagmi, and Supabase.
-
-### Stack
-
-- Next.js 14 App Router, React 19, Tailwind CSS
-- wagmi (EIP-712 signing) + MetaMask / injected wallets
-- Supabase JS SDK for optional email capture
-- Web Crypto HMAC for L2 auth
+Single-page app that lets a Kuest wallet owner mint API credentials (L1 signature) and manage keys (L2 HMAC) against `https://clob.kuest.com`.
 
 ### Required environment variables
 
