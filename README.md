@@ -33,7 +33,7 @@ NEXT_PUBLIC_APP_ICON=https://auth.kuest.com/kuest-logo.svg
 
 ### Supabase schema
 
-Apply the SQL migration in `supabase/migrations/0001_key_emails.sql` to create the anonymous insert-only table used to store `{ api_key, email }` pairs:
+Apply the SQL migrations in `supabase/migrations` to create the anonymous insert-only table used to store generated key contact data:
 
 ```bash
 supabase db push
@@ -53,7 +53,7 @@ Open `http://localhost:3000` and connect a Polygon (Mainnet 137 or Amoy 80002) w
 1. Connect wallet via Reown (WalletConnect v2).
 2. Switch to the required chain (`NEXT_PUBLIC_KUEST_CHAIN_MODE`; default `amoy`).
 3. Sign the EIP-712 `ClobAuthDomain` payload and mint API credentials.
-4. If an email was provided in advanced options, store `{ api_key, email }` in Supabase.
+4. If an email was provided in advanced options, store it with the generated API key in Supabase.
 5. Manage keys (list / revoke) via L2 HMAC signing (`timestamp + method + path(+query) + body`).
 
 ### Deploying
