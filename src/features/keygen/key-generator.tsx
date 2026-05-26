@@ -10,7 +10,7 @@ import {
   XIcon,
 } from 'lucide-react'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { UserRejectedRequestError } from 'viem'
 import {
   useAccount,
@@ -26,7 +26,9 @@ import { useAppKit } from '@/hooks/useAppKit'
 import { shortenAddress } from '@/lib/format'
 import {
   createKuestKey,
+  listKuestKeyMetadata,
   listKuestKeys,
+  nextKuestNonceFromMetadata,
   revokeKuestKey,
 } from '@/lib/kuest'
 import { createSupabaseClient } from '@/lib/supabase'
@@ -202,6 +204,7 @@ export function KeyGenerator() {
   const { switchChain, status: switchStatus } = useSwitchChain()
   const { signTypedDataAsync } = useSignTypedData()
   const { open: openAppKit, isReady: isAppKitReady } = useAppKit()
+  const signingInFlightRef = useRef(false)
 
   const isConnected
     = account.status === 'connected' && Boolean(account.address)
@@ -210,7 +213,6 @@ export function KeyGenerator() {
       ? account.chainId === REQUIRED_CHAIN_ID
       : false
 
-  const [nonce, setNonce] = useState('0')
   const [bundle, setBundle] = useState<KeyBundle | null>(null)
   const [keys, setKeys] = useState<string[]>([])
   const [keysLoading, setKeysLoading] = useState(false)
@@ -225,7 +227,6 @@ export function KeyGenerator() {
   const [connectPromptOpen, setConnectPromptOpen] = useState(false)
   const [autoProceedAfterConnect, setAutoProceedAfterConnect] = useState(false)
   const [emailNotice, setEmailNotice] = useState<string | null>(null)
-  const [nonceInputError, setNonceInputError] = useState<string | null>(null)
   const [showKeyManagement, setShowKeyManagement] = useState(false)
 
   const keyManagementDisabled = !bundle
@@ -290,10 +291,6 @@ export function KeyGenerator() {
     else {
       window.localStorage.removeItem(EMAIL_STORAGE_KEY)
     }
-  }
-
-  function sanitizeNonceInput(value: string) {
-    return value.replace(/\D+/g, '')
   }
 
   async function handleWalletConnectClick() {
@@ -411,7 +408,7 @@ export function KeyGenerator() {
       })
     // We intentionally react to connection/chain/signing state transitions.
     // Handler identities are recreated on render and are not used as effect triggers.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react/exhaustive-deps
   }, [
     autoProceedAfterConnect,
     isConnected,
@@ -456,6 +453,16 @@ export function KeyGenerator() {
     }
   }
 
+  async function resolveNonceForNextKey() {
+    if (!bundle) {
+      return '0'
+    }
+
+    setFlowInfo('Checking existing keys...')
+    const metadata = await listKuestKeyMetadata(getAuthContext())
+    return nextKuestNonceFromMetadata(metadata)
+  }
+
   async function handleSignAndGenerate() {
     setFlowError(null)
     setFlowInfo(null)
@@ -469,21 +476,17 @@ export function KeyGenerator() {
       return
     }
 
-    const rawNonce = nonce.trim()
-    const safeNonce = rawNonce === '' ? '0' : sanitizeNonceInput(rawNonce)
-    if (!/^\d+$/.test(safeNonce)) {
-      setNonceInputError('Nonce must contain digits only.')
+    if (signingInFlightRef.current) {
       return
     }
-    setNonceInputError(null)
-    if (safeNonce !== nonce) {
-      setNonce(safeNonce)
-    }
 
-    const timestamp = Math.floor(Date.now() / 1000).toString()
+    signingInFlightRef.current = true
+    setIsSigning(true)
 
     try {
-      setIsSigning(true)
+      const safeNonce = await resolveNonceForNextKey()
+      const timestamp = Math.floor(Date.now() / 1000).toString()
+
       setFlowInfo('Open your wallet and sign the Kuest attestation.')
 
       const typedData = {
@@ -571,6 +574,7 @@ export function KeyGenerator() {
       setFlowInfo(null)
     }
     catch (error) {
+      setFlowInfo(null)
       if (error instanceof UserRejectedRequestError) {
         setFlowError('Signature was rejected in your wallet.')
       }
@@ -592,6 +596,7 @@ export function KeyGenerator() {
       }
     }
     finally {
+      signingInFlightRef.current = false
       setIsSigning(false)
     }
   }
@@ -876,32 +881,6 @@ export function KeyGenerator() {
                         className="w-full auth-input px-4 py-2.5 text-sm"
                       />
                     </label>
-
-                    <label className="flex flex-col gap-2 text-sm text-foreground">
-                      <span className="text-xs font-semibold tracking-[0.24em] text-muted-foreground uppercase">
-                        Nonce
-                      </span>
-                      <input
-                        type="text"
-                        value={nonce}
-                        onChange={(event) => {
-                          setNonceInputError(null)
-                          setNonce(sanitizeNonceInput(event.target.value))
-                        }}
-                        inputMode="numeric"
-                        pattern="\d*"
-                        className="auth-input px-3 py-2 font-mono text-sm"
-                        placeholder="0"
-                      />
-                      {nonceInputError && (
-                        <span className="text-xs text-destructive">
-                          {nonceInputError}
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        Leave 0 unless you need a different key.
-                      </span>
-                    </label>
                   </div>
                 )}
               </div>
@@ -937,6 +916,19 @@ export function KeyGenerator() {
                 </p>
               </div>
               <EnvBlock bundle={bundle} />
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleSignAndGenerate}
+                  disabled={!canSign}
+                  className={`
+                    inline-flex items-center justify-center auth-secondary-button px-4 py-2 text-xs font-semibold
+                    tracking-[0.2em] uppercase
+                  `}
+                >
+                  Generate another key
+                </button>
+              </div>
             </div>
           )}
 
@@ -965,7 +957,6 @@ export function KeyGenerator() {
                     disabled={keyManagementDisabled}
                     helper={keysHelper}
                     error={keysError}
-                    activeKey={bundle?.apiKey ?? null}
                   />
                 </div>
               )}
