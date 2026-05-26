@@ -54,7 +54,7 @@ Open `http://localhost:3000` and connect a Polygon (Mainnet 137 or Amoy 80002) w
 2. Switch to the required chain (`NEXT_PUBLIC_KUEST_CHAIN_MODE`; default `amoy`).
 3. Sign the EIP-712 `ClobAuthDomain` payload and mint API credentials.
 4. If an email was provided in advanced options, store it with the generated API key in Supabase.
-5. Manage keys (list / revoke) via L2 HMAC signing (`timestamp + method + path(+query) + body`).
+5. Manage keys (list / revoke) via L2 HMAC signing (`timestamp + method + path + body`, excluding query strings).
 
 ### Deploying
 
