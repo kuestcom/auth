@@ -288,11 +288,12 @@ function buildHeaders(options: {
 async function signMessage(options: {
   apiSecret: string
   method: string
-  pathWithQuery: string
+  path: string
   timestamp: string
   body?: string
 }) {
-  const signingString = `${options.timestamp}${options.method.toUpperCase()}${options.pathWithQuery}${
+  const signingPath = options.path.split('?')[0]
+  const signingString = `${options.timestamp}${options.method.toUpperCase()}${signingPath}${
     options.body ?? ''
   }`
   return hmacSha256Base64Url(options.apiSecret, signingString)
@@ -409,14 +410,12 @@ async function fetchKeysFrom(baseUrl: string, auth: KuestAuthContext) {
   const url = new URL(path, baseUrl)
   url.searchParams.set('metadata', 'true')
   url.searchParams.set('includeRevoked', 'true')
-  const query = url.searchParams.toString()
-  const pathWithQuery = query ? `${path}?${query}` : path
   const timestamp = Math.floor(Date.now() / 1000).toString()
 
   const signature = await signMessage({
     apiSecret: auth.apiSecret,
     method: 'GET',
-    pathWithQuery,
+    path,
     timestamp,
   })
 
@@ -503,14 +502,12 @@ async function revokeKeyOn(
   const path = '/auth/api-key'
   const url = new URL(path, baseUrl)
   url.searchParams.set('apiKey', apiKey)
-  const query = url.searchParams.toString()
-  const pathWithQuery = query ? `${path}?${query}` : path
   const timestamp = Math.floor(Date.now() / 1000).toString()
 
   const signature = await signMessage({
     apiSecret: auth.apiSecret,
     method: 'DELETE',
-    pathWithQuery,
+    path,
     timestamp,
   })
 
