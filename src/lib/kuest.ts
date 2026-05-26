@@ -319,11 +319,7 @@ function normalizeKuestKeyMetadata(payload: unknown): KuestKeyMetadata[] {
         : typeof record.key === 'string'
           ? record.key
           : null
-    const nonce = typeof record.nonce === 'string'
-      ? record.nonce
-      : typeof record.nonce === 'number' && Number.isInteger(record.nonce)
-        ? record.nonce.toString()
-        : null
+    const nonce = normalizeKuestNonce(record.nonce)
     const status = typeof record.status === 'string' ? record.status : 'active'
 
     if (!apiKey) {
@@ -334,47 +330,66 @@ function normalizeKuestKeyMetadata(payload: unknown): KuestKeyMetadata[] {
   })
 }
 
+function normalizeKuestNonce(value: unknown) {
+  const raw = typeof value === 'string'
+    ? value
+    : typeof value === 'number' && Number.isInteger(value)
+      ? value.toString()
+      : null
+  if (!raw) {
+    return null
+  }
+
+  const parsed = parseKuestNonce(raw)
+  return parsed === null ? null : parsed.toString()
+}
+
+function parseKuestNonce(value: string | null) {
+  if (!value) {
+    return null
+  }
+
+  try {
+    const parsed = BigInt(value)
+    return parsed < BigInt(0) ? null : parsed
+  }
+  catch {
+    return null
+  }
+}
+
 export function nextKuestNonceFromMetadata(keys: KuestKeyMetadata[]) {
   let maxNonce: bigint | null = null
 
   for (const key of keys) {
-    if (!key.nonce) {
+    const value = parseKuestNonce(key.nonce)
+    if (value === null) {
       continue
     }
-    try {
-      const value = BigInt(key.nonce)
-      if (value < BigInt(0)) {
-        continue
-      }
-      if (maxNonce === null || value > maxNonce) {
-        maxNonce = value
-      }
+    if (maxNonce === null || value > maxNonce) {
+      maxNonce = value
     }
-    catch {}
   }
 
   return maxNonce === null ? '0' : (maxNonce + BigInt(1)).toString()
 }
 
 function compareNonce(left: string | null, right: string | null) {
-  if (!left) {
-    return right ? -1 : 0
-  }
-  if (!right) {
-    return 1
-  }
-
-  try {
-    const leftValue = BigInt(left)
-    const rightValue = BigInt(right)
+  const leftValue = parseKuestNonce(left)
+  const rightValue = parseKuestNonce(right)
+  if (leftValue !== null && rightValue !== null) {
     if (leftValue === rightValue) {
       return 0
     }
     return leftValue > rightValue ? 1 : -1
   }
-  catch {
-    return left.localeCompare(right)
+  if (leftValue !== null) {
+    return 1
   }
+  if (rightValue !== null) {
+    return -1
+  }
+  return 0
 }
 
 function mergeKuestKeyMetadata(existing: KuestKeyMetadata, incoming: KuestKeyMetadata) {
