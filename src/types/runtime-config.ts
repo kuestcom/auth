@@ -1,7 +1,1 @@
-export interface RuntimeConfig {
-  siteName: string
-  kuestChainMode: 'amoy' | 'polygon'
-  reownAppKitProjectId: string
-  appUrl: string
-  appIcon: string
-}
+export type { RuntimeConfig } from '../../shared/api'

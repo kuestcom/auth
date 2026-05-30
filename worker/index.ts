@@ -1,8 +1,8 @@
 import type {
   CreateKuestKeyInput,
-  Env,
   KuestAuthContext,
-} from './types'
+} from '../shared/api'
+import type { Env } from './types'
 import {
   HttpError,
   json,
@@ -48,12 +48,24 @@ function requireRecord(payload: unknown): Record<string, unknown> {
 
 function normalizeError(error: unknown) {
   if (error instanceof HttpError) {
-    return { status: error.status, message: error.message }
+    return {
+      status: error.status,
+      message: error.message,
+      logMessage: error.message,
+    }
   }
   if (error instanceof Error) {
-    return { status: 500, message: error.message }
+    return {
+      status: 500,
+      message: 'Unexpected request failure.',
+      logMessage: error.message,
+    }
   }
-  return { status: 500, message: 'Unexpected request failure.' }
+  return {
+    status: 500,
+    message: 'Unexpected request failure.',
+    logMessage: 'Non-error exception.',
+  }
 }
 
 async function handleApi(request: Request, env: Env) {
@@ -108,7 +120,7 @@ async function handleApi(request: Request, env: Env) {
     if (normalized.status >= 500) {
       console.warn('[api] request failed', {
         path: url.pathname,
-        message: normalized.message,
+        message: normalized.logMessage,
       })
     }
     return json(

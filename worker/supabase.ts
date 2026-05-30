@@ -1,5 +1,5 @@
 import type { Env } from './types'
-import { readJsonSafely } from './http'
+import { HttpError, readJsonSafely } from './http'
 import { getSupabaseConfig } from './runtime-config'
 
 export async function saveKeyEmail(
@@ -32,13 +32,13 @@ export async function saveKeyEmail(
   const code = payload && typeof payload === 'object'
     ? (payload as { code?: string }).code
     : undefined
-  const message = payload && typeof payload === 'object'
-    ? (payload as { message?: string }).message
-    : undefined
-
   if (response.status === 409 || code === '23505') {
     return { status: 'duplicate' as const }
   }
 
-  throw new Error(message ?? 'Supabase rejected this request.')
+  console.warn('[supabase] key email insert failed', {
+    status: response.status,
+    payload,
+  })
+  throw new HttpError(502, 'Supabase rejected this request.')
 }

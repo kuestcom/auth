@@ -35,7 +35,7 @@
 }
 
 :root {
-  --font-sans: 'Open Sauce One', ui-sans-serif, system-ui, sans-serif;
+  --font-app-sans: 'Open Sauce One', ui-sans-serif, system-ui, sans-serif;
   --yes: oklch(62.7% 0.194 149.214);
   --yes-foreground: oklch(52.7% 0.154 150.069);
   --no: oklch(63.7% 0.237 25.331);
@@ -120,7 +120,7 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-app-sans);
   --color-yes: var(--yes);
   --color-yes-foreground: var(--yes-foreground);
   --color-no: var(--no);

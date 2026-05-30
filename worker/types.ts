@@ -18,42 +18,10 @@ export interface Env {
   NEXT_PUBLIC_REOWN_APPKIT_PROJECT_ID?: string
   NEXT_PUBLIC_APP_URL?: string
   NEXT_PUBLIC_APP_ICON?: string
+  NEXT_PUBLIC_CLOB_URL?: string
   NEXT_PUBLIC_FORKAST_BASE_URL?: string
+  NEXT_PUBLIC_RELAYER_URL?: string
   NEXT_PUBLIC_SUPABASE_URL?: string
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?: string
-}
-
-export interface RuntimeConfig {
-  siteName: string
-  kuestChainMode: 'amoy' | 'polygon'
-  reownAppKitProjectId: string
-  appUrl: string
-  appIcon: string
-}
-
-export interface KeyBundle {
-  apiKey: string
-  apiSecret: string
-  passphrase: string
-}
-
-export interface CreateKuestKeyInput {
-  address: string
-  signature: string
-  timestamp: string
-  nonce: string
-}
-
-export interface KuestAuthContext {
-  address: string
-  apiKey: string
-  apiSecret: string
-  passphrase: string
-}
-
-export interface KuestKeyMetadata {
-  apiKey: string
-  nonce: string | null
-  status: string
 }

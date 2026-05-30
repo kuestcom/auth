@@ -1,4 +1,5 @@
-import type { Env, RuntimeConfig } from './types'
+import type { RuntimeConfig } from '../shared/api'
+import type { Env } from './types'
 
 function firstEnv(env: Env, ...keys: Array<keyof Env>) {
   for (const key of keys) {
@@ -46,8 +47,14 @@ export function getRuntimeConfig(env: Env): RuntimeConfig {
 
 export function getKuestBaseUrls(env: Env) {
   const values = [
-    firstEnv(env, 'CLOB_URL', 'KUEST_BASE_URL', 'NEXT_PUBLIC_FORKAST_BASE_URL'),
-    firstEnv(env, 'RELAYER_URL'),
+    firstEnv(
+      env,
+      'CLOB_URL',
+      'KUEST_BASE_URL',
+      'NEXT_PUBLIC_CLOB_URL',
+      'NEXT_PUBLIC_FORKAST_BASE_URL',
+    ),
+    firstEnv(env, 'RELAYER_URL', 'NEXT_PUBLIC_RELAYER_URL'),
   ].filter(Boolean)
 
   const unique = Array.from(new Set(values))

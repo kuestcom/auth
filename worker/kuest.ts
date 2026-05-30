@@ -1,12 +1,12 @@
 import type {
   CreateKuestKeyInput,
-  Env,
-  KeyBundle,
+  KuestKeyBundle,
   KuestAuthContext,
   KuestKeyMetadata,
-} from './types'
+} from '../shared/api'
+import type { Env } from './types'
 import { hmacSha256Base64Url } from './crypto'
-import { readJsonSafely } from './http'
+import { HttpError, readJsonSafely } from './http'
 import { getKuestBaseUrls, kuestDebugErrorsEnabled } from './runtime-config'
 
 function sanitizeKuestMessage(
@@ -45,9 +45,9 @@ function sanitizeKuestMessage(
   return sanitized
 }
 
-function normalizeKeyBundle(payload: unknown): KeyBundle {
+function normalizeKeyBundle(payload: unknown): KuestKeyBundle {
   if (!payload || typeof payload !== 'object') {
-    throw new Error('Unexpected response when minting API key.')
+    throw new HttpError(502, 'Unexpected response when minting API key.')
   }
 
   function unwrapNested(value: unknown): Record<string, unknown> | null {
@@ -63,7 +63,7 @@ function normalizeKeyBundle(payload: unknown): KeyBundle {
 
   const record = unwrapNested(payload)
   if (!record) {
-    throw new Error('Unexpected response when minting API key.')
+    throw new HttpError(502, 'Unexpected response when minting API key.')
   }
   const normalizedRecord = record
 
@@ -83,7 +83,8 @@ function normalizeKeyBundle(payload: unknown): KeyBundle {
 
   if (!apiKey || !apiSecret || !passphrase) {
     const keys = Object.keys(normalizedRecord).join(', ') || 'none'
-    throw new Error(
+    throw new HttpError(
+      502,
       `Kuest did not return API credentials. Payload keys: ${keys}`,
     )
   }
@@ -114,6 +115,7 @@ async function requestKuestKey(
       KUEST_TIMESTAMP: timestamp,
       KUEST_NONCE: nonce,
     },
+    cache: 'no-store',
   })
 
   if (!response.ok) {
@@ -132,7 +134,7 @@ async function requestKuestKey(
       status: response.status,
       message,
     })
-    throw new Error(sanitized)
+    throw new HttpError(502, sanitized)
   }
 
   const data = await response.json()
@@ -167,7 +169,7 @@ async function deriveExistingKuestKey(
     || value.passphrase !== first.passphrase
   ))
   if (mismatch) {
-    throw new Error('Kuest services returned mismatched API credentials.')
+    throw new HttpError(502, 'Kuest services returned mismatched API credentials.')
   }
 
   return first
@@ -179,7 +181,7 @@ export async function createKuestKey(env: Env, input: CreateKuestKeyInput) {
     targets.map(baseUrl => requestKuestKey(env, baseUrl, input)),
   )
 
-  const values: KeyBundle[] = []
+  const values: KuestKeyBundle[] = []
   const failures: Error[] = []
 
   for (const result of results) {
@@ -207,11 +209,11 @@ export async function createKuestKey(env: Env, input: CreateKuestKeyInput) {
     const prefix = failures.length === targets.length
       ? 'Failed to generate API key.'
       : 'Failed to generate API key on all services.'
-    throw new Error(`${prefix} ${normalized.message}`)
+    throw new HttpError(502, `${prefix} ${normalized.message}`)
   }
 
   if (values.length === 0) {
-    throw new Error('Failed to generate API key.')
+    throw new HttpError(502, 'Failed to generate API key.')
   }
 
   const [first, ...rest] = values
@@ -222,7 +224,7 @@ export async function createKuestKey(env: Env, input: CreateKuestKeyInput) {
   ))
 
   if (mismatch) {
-    throw new Error('Kuest services returned mismatched API credentials.')
+    throw new HttpError(502, 'Kuest services returned mismatched API credentials.')
   }
 
   return first
@@ -374,6 +376,7 @@ async function fetchKeysFrom(baseUrl: string, env: Env, auth: KuestAuthContext) 
       timestamp,
       signature,
     }),
+    cache: 'no-store',
   })
 
   if (!response.ok) {
@@ -386,12 +389,12 @@ async function fetchKeysFrom(baseUrl: string, env: Env, auth: KuestAuthContext) 
           ?? message
     }
     const sanitized = sanitizeKuestMessage(env, response.status, message)
-    throw new Error(`${baseUrl}: ${sanitized}`)
+    throw new HttpError(502, sanitized)
   }
 
   const data = await response.json()
   if (!Array.isArray(data)) {
-    throw new TypeError(`${baseUrl}: Unexpected response when listing keys.`)
+    throw new HttpError(502, 'Unexpected response when listing keys.')
   }
 
   return normalizeKuestKeyMetadata(data)
@@ -459,6 +462,7 @@ async function revokeKeyOn(
       timestamp,
       signature,
     }),
+    cache: 'no-store',
   })
 
   if (!response.ok) {
@@ -471,7 +475,7 @@ async function revokeKeyOn(
           ?? message
     }
     const sanitized = sanitizeKuestMessage(env, response.status, message)
-    throw new Error(`${baseUrl}: ${sanitized}`)
+    throw new HttpError(502, sanitized)
   }
 }
 

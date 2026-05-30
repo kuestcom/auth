@@ -1,19 +1,14 @@
-import type { KeyBundle, KuestKeyMetadata } from '@/types/keygen'
-import type { RuntimeConfig } from '@/types/runtime-config'
-
-export interface CreateKuestKeyInput {
-  address: string
-  signature: string
-  timestamp: string
-  nonce: string
-}
-
-export interface KuestAuthContext {
-  address: string
-  apiKey: string
-  apiSecret: string
-  passphrase: string
-}
+import type {
+  CreateKuestKeyInput,
+  KuestAuthContext,
+  KuestKeyBundle,
+  KuestKeyMetadata,
+  ListKuestKeysResponse,
+  RevokeKuestKeyResponse,
+  RuntimeConfig,
+  SaveKeyEmailInput,
+  SaveKeyEmailResponse,
+} from '../../shared/api'
 
 async function parseResponseError(response: Response) {
   try {
@@ -64,7 +59,7 @@ export function getRuntimeConfig() {
 }
 
 export async function createKuestKey(input: CreateKuestKeyInput) {
-  const result = await requestJson<Omit<KeyBundle, 'address'>>(
+  const result = await requestJson<KuestKeyBundle>(
     '/api/kuest/create-key',
     {
       method: 'POST',
@@ -76,7 +71,7 @@ export async function createKuestKey(input: CreateKuestKeyInput) {
 }
 
 export async function listKuestKeyMetadata(auth: KuestAuthContext) {
-  const result = await requestJson<{ keys: KuestKeyMetadata[] }>(
+  const result = await requestJson<ListKuestKeysResponse>(
     '/api/kuest/list-keys',
     {
       method: 'POST',
@@ -98,18 +93,15 @@ export async function revokeKuestKey(
   auth: KuestAuthContext,
   apiKey: string,
 ) {
-  await requestJson<{ ok: true }>('/api/kuest/revoke-key', {
+  await requestJson<RevokeKuestKeyResponse>('/api/kuest/revoke-key', {
     method: 'POST',
     body: JSON.stringify({ auth, apiKey }),
   })
   return true
 }
 
-export async function saveKeyEmail(input: {
-  apiKey: string
-  email: string
-}) {
-  return requestJson<{ status: 'saved' | 'duplicate' }>('/api/key-emails', {
+export async function saveKeyEmail(input: SaveKeyEmailInput) {
+  return requestJson<SaveKeyEmailResponse>('/api/key-emails', {
     method: 'POST',
     body: JSON.stringify(input),
   })

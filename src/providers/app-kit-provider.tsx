@@ -25,6 +25,9 @@ function getOrCreateAppKit(
   if (typeof window === 'undefined') {
     return null
   }
+  if (!config.reownAppKitProjectId) {
+    return null
+  }
 
   if (appKitInstance && appKitProjectId === config.reownAppKitProjectId) {
     return appKitInstance
@@ -65,8 +68,14 @@ export default function AppKitProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
+    if (!config.reownAppKitProjectId) {
+      setAppKitValue(defaultAppKitValue)
+      return
+    }
+
     const instance = getOrCreateAppKit(config, wagmiAdapter)
     if (!instance) {
+      setAppKitValue(defaultAppKitValue)
       return
     }
 

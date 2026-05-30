@@ -22,11 +22,7 @@ export function RuntimeConfigProvider({ children }: RuntimeConfigProviderProps) 
           return
         }
         setConfig(nextConfig)
-        setError(
-          nextConfig.reownAppKitProjectId
-            ? null
-            : 'REOWN_APPKIT_PROJECT_ID is missing.',
-        )
+        setError(null)
       })
       .catch((requestError) => {
         if (!active) {
