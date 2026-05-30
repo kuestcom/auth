@@ -22,7 +22,11 @@ export function RuntimeConfigProvider({ children }: RuntimeConfigProviderProps) 
           return
         }
         setConfig(nextConfig)
-        setError(null)
+        setError(
+          nextConfig.reownAppKitProjectId.trim()
+            ? null
+            : 'Wallet connection is not configured.',
+        )
       })
       .catch((requestError) => {
         if (!active) {
