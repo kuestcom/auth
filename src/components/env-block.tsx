@@ -1,7 +1,4 @@
-'use client'
-
 import type { KeyBundle } from '@/types/keygen'
-
 import { useMemo } from 'react'
 import { CopyButton } from '@/components/copy-button'
 

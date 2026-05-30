@@ -1,5 +1,3 @@
-'use client'
-
 import { CopyButton } from '@/components/copy-button'
 
 interface KeysPanelProps {
@@ -40,7 +38,7 @@ export function KeysPanel({
           disabled={loading || disabled}
           className="auth-secondary-button px-3 py-1.5 text-xs font-semibold tracking-[0.2em] uppercase"
         >
-          {loading ? 'Loading…' : 'Refresh'}
+          {loading ? 'Loading...' : 'Refresh'}
         </button>
       </header>
 

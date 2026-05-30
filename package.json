@@ -1,8 +1,9 @@
 {
-  "name": "kuest-auth",
+  "name": "kuest-auth-worker",
   "private": true,
+  "type": "module",
   "packageManager": "npm@11.6.2",
-  "description": "Generate and manage Kuest API credentials.",
+  "description": "Kuest API credential generator for Cloudflare Workers.",
   "repository": {
     "type": "git",
     "url": "https://github.com/kuestcom/auth.git"
@@ -11,46 +12,37 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint . --fix",
-    "prepare": "husky"
+    "dev": "vite dev",
+    "build": "vite build",
+    "check": "tsc --noEmit",
+    "deploy": "npm run build && wrangler deploy",
+    "preview": "npm run build && wrangler dev"
   },
   "dependencies": {
     "@reown/appkit": "1.8.19",
     "@reown/appkit-adapter-wagmi": "1.8.19",
-    "@supabase/supabase-js": "2.105.3",
     "@tanstack/react-query": "5.100.9",
     "lucide-react": "1.14.0",
-    "next": "16.2.6",
+    "postgres": "^3.4.9",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "viem": "2.48.11",
     "wagmi": "2.19.5"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^8.2.0",
-    "@eslint-react/eslint-plugin": "^3.0.0",
-    "@next/eslint-plugin-next": "16.2.6",
-    "@tailwindcss/postcss": "^4.2.4",
+    "@cloudflare/vite-plugin": "1.39.0",
+    "@cloudflare/workers-types": "4.20260529.1",
+    "@tailwindcss/vite": "4.3.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^10.3.0",
-    "eslint-plugin-better-tailwindcss": "^4.5.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.0.2",
-    "tailwindcss": "^4.2.4",
-    "typescript": "^5.9.3"
+    "@vitejs/plugin-react": "6.0.2",
+    "tailwindcss": "4.3.0",
+    "typescript": "^5.9.3",
+    "vite": "8.0.14",
+    "wrangler": "4.95.0"
   },
   "overrides": {
-    "axios": "1.16.0",
-    "postcss": "^8.5.14"
-  },
-  "lint-staged": {
-    "*": "eslint --fix"
+    "axios": "1.16.0"
   }
 }

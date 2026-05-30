@@ -1,57 +1,16 @@
-import type { KeyBundle } from '@/types/keygen'
-import { hmacSha256Base64Url } from '@/lib/crypto'
-
-const KUEST_DEBUG_ERRORS_ENABLED = (() => {
-  const value = process.env.NEXT_PUBLIC_KUEST_DEBUG_ERRORS
-  if (!value) {
-    return false
-  }
-  const normalized = value.trim().toLowerCase()
-  return (
-    normalized === '1'
-    || normalized === 'true'
-    || normalized === 'yes'
-    || normalized === 'on'
-  )
-})()
-
-function getKuestBaseUrls() {
-  const values = [process.env.CLOB_URL, process.env.RELAYER_URL]
-    .map(value => value?.trim())
-    .filter((value): value is string => Boolean(value))
-
-  const unique = Array.from(new Set(values))
-  if (unique.length === 0) {
-    throw new Error('CLOB_URL or RELAYER_URL must be defined.')
-  }
-  return unique
-}
-
-export function getKuestBaseUrl() {
-  return getKuestBaseUrls()[0]
-}
-
-interface CreateKuestKeyInput {
-  address: string
-  signature: string
-  timestamp: string
-  nonce: string
-}
-
-export interface KuestAuthContext {
-  address: string
-  apiKey: string
-  apiSecret: string
-  passphrase: string
-}
-
-export interface KuestKeyMetadata {
-  apiKey: string
-  nonce: string | null
-  status: string
-}
+import type {
+  CreateKuestKeyInput,
+  KuestKeyBundle,
+  KuestAuthContext,
+  KuestKeyMetadata,
+} from '../shared/api'
+import type { Env } from './types'
+import { hmacSha256Base64Url } from './crypto'
+import { HttpError, readJsonSafely } from './http'
+import { getKuestBaseUrls, kuestDebugErrorsEnabled } from './runtime-config'
 
 function sanitizeKuestMessage(
+  env: Env,
   status: number | undefined,
   rawMessage?: string,
 ) {
@@ -76,19 +35,19 @@ function sanitizeKuestMessage(
     sanitized = 'Kuest request failed. Please try again.'
   }
 
-  if (KUEST_DEBUG_ERRORS_ENABLED && truncated.length > 0) {
+  if (kuestDebugErrorsEnabled(env) && truncated.length > 0) {
     if (sanitized === truncated) {
       return truncated
     }
-    return `${truncated} — ${sanitized}`
+    return `${truncated} - ${sanitized}`
   }
 
   return sanitized
 }
 
-function normalizeKeyBundle(payload: unknown): Omit<KeyBundle, 'address'> {
+function normalizeKeyBundle(payload: unknown): KuestKeyBundle {
   if (!payload || typeof payload !== 'object') {
-    throw new Error('Unexpected response when minting API key.')
+    throw new HttpError(502, 'Unexpected response when minting API key.')
   }
 
   function unwrapNested(value: unknown): Record<string, unknown> | null {
@@ -102,15 +61,15 @@ function normalizeKeyBundle(payload: unknown): Omit<KeyBundle, 'address'> {
     return null
   }
 
-  const record
-    = unwrapNested(payload)
-      ?? (() => {
-        throw new Error('Unexpected response when minting API key.')
-      })()
+  const record = unwrapNested(payload)
+  if (!record) {
+    throw new HttpError(502, 'Unexpected response when minting API key.')
+  }
+  const normalizedRecord = record
 
   function readFirst(...keys: string[]) {
     for (const key of keys) {
-      const candidate = record[key]
+      const candidate = normalizedRecord[key]
       if (typeof candidate === 'string' && candidate.length > 0) {
         return candidate
       }
@@ -118,13 +77,14 @@ function normalizeKeyBundle(payload: unknown): Omit<KeyBundle, 'address'> {
     return undefined
   }
 
-  const apiKey = readFirst('apiKey')
-  const apiSecret = readFirst('secret')
+  const apiKey = readFirst('apiKey', 'api_key', 'key')
+  const apiSecret = readFirst('secret', 'apiSecret', 'api_secret')
   const passphrase = readFirst('passphrase')
 
   if (!apiKey || !apiSecret || !passphrase) {
-    const keys = Object.keys(record).join(', ') || 'none'
-    throw new Error(
+    const keys = Object.keys(normalizedRecord).join(', ') || 'none'
+    throw new HttpError(
+      502,
       `Kuest did not return API credentials. Payload keys: ${keys}`,
     )
   }
@@ -137,6 +97,7 @@ function normalizeKeyBundle(payload: unknown): Omit<KeyBundle, 'address'> {
 }
 
 async function requestKuestKey(
+  env: Env,
   baseUrl: string,
   { address, signature, timestamp, nonce }: CreateKuestKeyInput,
   options: {
@@ -159,90 +120,35 @@ async function requestKuestKey(
 
   if (!response.ok) {
     let message = 'Failed to generate API key.'
-    try {
-      const errorPayload = await response.json()
-      if (errorPayload && typeof errorPayload === 'object') {
-        message
-          = (errorPayload as { message?: string }).message
-            ?? (errorPayload as { error?: string }).error
-            ?? message
-      }
+    const errorPayload = await readJsonSafely(response)
+    if (errorPayload && typeof errorPayload === 'object') {
+      message
+        = (errorPayload as { message?: string }).message
+          ?? (errorPayload as { error?: string }).error
+          ?? message
     }
-    catch {
-      // ignore parse failure
-    }
-    const sanitized = sanitizeKuestMessage(response.status, message)
+
+    const sanitized = sanitizeKuestMessage(env, response.status, message)
     console.warn('[kuest] create key failed', {
       baseUrl,
       status: response.status,
       message,
     })
-    throw new Error(sanitized)
+    throw new HttpError(502, sanitized)
   }
 
   const data = await response.json()
   return normalizeKeyBundle(data)
 }
 
-export async function createKuestKey(input: CreateKuestKeyInput) {
-  const targets = getKuestBaseUrls()
-  const results = await Promise.allSettled(
-    targets.map(baseUrl => requestKuestKey(baseUrl, input)),
-  )
-
-  const values: Array<Omit<KeyBundle, 'address'>> = []
-  const failures: Error[] = []
-
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      values.push(result.value)
-    }
-    else {
-      failures.push(
-        result.reason instanceof Error
-          ? result.reason
-          : new Error(String(result.reason)),
-      )
-    }
-  }
-
-  if (failures.length > 0) {
-    if (failures.length === targets.length) {
-      const recovered = await deriveExistingKuestKey(targets, input)
-      if (recovered) {
-        return recovered
-      }
-    }
-
-    const normalized = failures[0]
-    const prefix = failures.length === targets.length
-      ? 'Failed to generate API key.'
-      : 'Failed to generate API key on all services.'
-    throw new Error(`${prefix} ${normalized.message}`)
-  }
-
-  if (values.length === 0) {
-    throw new Error('Failed to generate API key.')
-  }
-
-  const [first, ...rest] = values
-  const mismatch = rest.find(value => (
-    value.apiKey !== first.apiKey
-    || value.apiSecret !== first.apiSecret
-    || value.passphrase !== first.passphrase
-  ))
-
-  if (mismatch) {
-    throw new Error('Kuest services returned mismatched API credentials.')
-  }
-
-  return first
-}
-
-async function deriveExistingKuestKey(targets: string[], input: CreateKuestKeyInput) {
+async function deriveExistingKuestKey(
+  env: Env,
+  targets: string[],
+  input: CreateKuestKeyInput,
+) {
   const results = await Promise.allSettled(
     targets.map(baseUrl =>
-      requestKuestKey(baseUrl, input, {
+      requestKuestKey(env, baseUrl, input, {
         path: '/auth/derive-api-key',
         method: 'GET',
       }),
@@ -263,7 +169,62 @@ async function deriveExistingKuestKey(targets: string[], input: CreateKuestKeyIn
     || value.passphrase !== first.passphrase
   ))
   if (mismatch) {
-    throw new Error('Kuest services returned mismatched API credentials.')
+    throw new HttpError(502, 'Kuest services returned mismatched API credentials.')
+  }
+
+  return first
+}
+
+export async function createKuestKey(env: Env, input: CreateKuestKeyInput) {
+  const targets = getKuestBaseUrls(env)
+  const results = await Promise.allSettled(
+    targets.map(baseUrl => requestKuestKey(env, baseUrl, input)),
+  )
+
+  const values: KuestKeyBundle[] = []
+  const failures: Error[] = []
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      values.push(result.value)
+    }
+    else {
+      failures.push(
+        result.reason instanceof Error
+          ? result.reason
+          : new Error(String(result.reason)),
+      )
+    }
+  }
+
+  if (failures.length > 0) {
+    if (failures.length === targets.length) {
+      const recovered = await deriveExistingKuestKey(env, targets, input)
+      if (recovered) {
+        return recovered
+      }
+    }
+
+    const normalized = failures[0]
+    const prefix = failures.length === targets.length
+      ? 'Failed to generate API key.'
+      : 'Failed to generate API key on all services.'
+    throw new HttpError(502, `${prefix} ${normalized.message}`)
+  }
+
+  if (values.length === 0) {
+    throw new HttpError(502, 'Failed to generate API key.')
+  }
+
+  const [first, ...rest] = values
+  const mismatch = rest.find(value => (
+    value.apiKey !== first.apiKey
+    || value.apiSecret !== first.apiSecret
+    || value.passphrase !== first.passphrase
+  ))
+
+  if (mismatch) {
+    throw new HttpError(502, 'Kuest services returned mismatched API credentials.')
   }
 
   return first
@@ -359,22 +320,6 @@ function parseKuestNonce(value: string | null) {
   }
 }
 
-export function nextKuestNonceFromMetadata(keys: KuestKeyMetadata[]) {
-  let maxNonce: bigint | null = null
-
-  for (const key of keys) {
-    const value = parseKuestNonce(key.nonce)
-    if (value === null) {
-      continue
-    }
-    if (maxNonce === null || value > maxNonce) {
-      maxNonce = value
-    }
-  }
-
-  return maxNonce === null ? '0' : (maxNonce + BigInt(1)).toString()
-}
-
 function compareNonce(left: string | null, right: string | null) {
   const leftValue = parseKuestNonce(left)
   const rightValue = parseKuestNonce(right)
@@ -393,7 +338,10 @@ function compareNonce(left: string | null, right: string | null) {
   return 0
 }
 
-function mergeKuestKeyMetadata(existing: KuestKeyMetadata, incoming: KuestKeyMetadata) {
+function mergeKuestKeyMetadata(
+  existing: KuestKeyMetadata,
+  incoming: KuestKeyMetadata,
+) {
   return {
     apiKey: existing.apiKey,
     nonce: compareNonce(existing.nonce, incoming.nonce) >= 0
@@ -405,7 +353,7 @@ function mergeKuestKeyMetadata(existing: KuestKeyMetadata, incoming: KuestKeyMet
   }
 }
 
-async function fetchKeysFrom(baseUrl: string, auth: KuestAuthContext) {
+async function fetchKeysFrom(baseUrl: string, env: Env, auth: KuestAuthContext) {
   const path = '/auth/api-keys'
   const url = new URL(path, baseUrl)
   url.searchParams.set('metadata', 'true')
@@ -433,36 +381,36 @@ async function fetchKeysFrom(baseUrl: string, auth: KuestAuthContext) {
 
   if (!response.ok) {
     let message = 'Failed to load keys.'
-    try {
-      const payload = await response.json()
-      if (payload && typeof payload === 'object') {
-        message
-          = (payload as { message?: string }).message
-            ?? (payload as { error?: string }).error
-            ?? message
-      }
+    const payload = await readJsonSafely(response)
+    if (payload && typeof payload === 'object') {
+      message
+        = (payload as { message?: string }).message
+          ?? (payload as { error?: string }).error
+          ?? message
     }
-    catch {}
-    const sanitized = sanitizeKuestMessage(response.status, message)
-    throw new Error(`${baseUrl}: ${sanitized}`)
+    const sanitized = sanitizeKuestMessage(env, response.status, message)
+    throw new HttpError(502, sanitized)
   }
 
   const data = await response.json()
   if (!Array.isArray(data)) {
-    throw new TypeError(`${baseUrl}: Unexpected response when listing keys.`)
+    throw new HttpError(502, 'Unexpected response when listing keys.')
   }
 
   return normalizeKuestKeyMetadata(data)
 }
 
-export async function listKuestKeyMetadata(auth: KuestAuthContext) {
-  const targets = getKuestBaseUrls()
+export async function listKuestKeyMetadata(
+  env: Env,
+  auth: KuestAuthContext,
+) {
+  const targets = getKuestBaseUrls(env)
   const keys = new Map<string, KuestKeyMetadata>()
   let lastError: Error | null = null
 
   for (const baseUrl of targets) {
     try {
-      const fetched = await fetchKeysFrom(baseUrl, auth)
+      const fetched = await fetchKeysFrom(baseUrl, env, auth)
       fetched.forEach((key) => {
         const existing = keys.get(key.apiKey)
         keys.set(
@@ -487,15 +435,9 @@ export async function listKuestKeyMetadata(auth: KuestAuthContext) {
   throw lastError ?? new Error('Failed to load keys.')
 }
 
-export async function listKuestKeys(auth: KuestAuthContext) {
-  const keys = await listKuestKeyMetadata(auth)
-  return keys
-    .filter(key => key.status === 'active')
-    .map(key => key.apiKey)
-}
-
 async function revokeKeyOn(
   baseUrl: string,
+  env: Env,
   auth: KuestAuthContext,
   apiKey: string,
 ) {
@@ -520,36 +462,35 @@ async function revokeKeyOn(
       timestamp,
       signature,
     }),
+    cache: 'no-store',
   })
 
   if (!response.ok) {
     let message = 'Failed to revoke key.'
-    try {
-      const payload = await response.json()
-      if (payload && typeof payload === 'object') {
-        message
-          = (payload as { message?: string }).message
-            ?? (payload as { error?: string }).error
-            ?? message
-      }
+    const payload = await readJsonSafely(response)
+    if (payload && typeof payload === 'object') {
+      message
+        = (payload as { message?: string }).message
+          ?? (payload as { error?: string }).error
+          ?? message
     }
-    catch {}
-    const sanitized = sanitizeKuestMessage(response.status, message)
-    throw new Error(`${baseUrl}: ${sanitized}`)
+    const sanitized = sanitizeKuestMessage(env, response.status, message)
+    throw new HttpError(502, sanitized)
   }
 }
 
 export async function revokeKuestKey(
+  env: Env,
   auth: KuestAuthContext,
   apiKey: string,
 ) {
-  const targets = getKuestBaseUrls()
+  const targets = getKuestBaseUrls(env)
   let success = false
   let lastError: Error | null = null
 
   for (const baseUrl of targets) {
     try {
-      await revokeKeyOn(baseUrl, auth, apiKey)
+      await revokeKeyOn(baseUrl, env, auth, apiKey)
       success = true
     }
     catch (error) {

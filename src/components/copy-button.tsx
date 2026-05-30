@@ -1,5 +1,3 @@
-'use client'
-
 import { CheckIcon, CopyIcon } from 'lucide-react'
 import { useState } from 'react'
 
@@ -10,14 +8,19 @@ interface CopyButtonProps {
   ariaLabel?: string
 }
 
-export function CopyButton({ value, size = 'md', className = '', ariaLabel = 'Copy to clipboard' }: CopyButtonProps) {
+export function CopyButton({
+  value,
+  size = 'md',
+  className = '',
+  ariaLabel = 'Copy to clipboard',
+}: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
-      setTimeout(setCopied, 1500, false)
+      window.setTimeout(setCopied, 1500, false)
     }
     catch (error) {
       console.error('Copy failed', error)

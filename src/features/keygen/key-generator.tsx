@@ -1,5 +1,3 @@
-'use client'
-
 import type { KeyBundle } from '@/types/keygen'
 import { useWalletInfo } from '@reown/appkit/react'
 import {
@@ -9,7 +7,6 @@ import {
   WalletIcon,
   XIcon,
 } from 'lucide-react'
-import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { UserRejectedRequestError } from 'viem'
 import {
@@ -23,6 +20,7 @@ import { EnvBlock } from '@/components/env-block'
 import { KeysPanel } from '@/components/keys-panel'
 import { SiteLogoIcon } from '@/components/site-logo-icon'
 import { useAppKit } from '@/hooks/useAppKit'
+import { useRuntimeConfig } from '@/hooks/useRuntimeConfig'
 import { shortenAddress } from '@/lib/format'
 import {
   createKuestKey,
@@ -30,21 +28,11 @@ import {
   listKuestKeys,
   nextKuestNonceFromMetadata,
   revokeKuestKey,
-} from '@/lib/kuest'
-import { createSupabaseClient } from '@/lib/supabase'
+  saveKeyEmail,
+} from '@/lib/api'
 
 const EMAIL_STORAGE_KEY = 'kuest-email'
-const EMAIL_STORAGE_TTL = 1000 * 60 * 60 * 24 * 3 // 3 days
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME?.trim() || 'Kuest'
-const TARGET_CHAIN_MODE
-  = process.env.NEXT_PUBLIC_KUEST_CHAIN_MODE === 'polygon'
-    ? 'polygon'
-    : 'amoy'
-const REQUIRED_CHAIN = TARGET_CHAIN_MODE === 'polygon' ? polygon : polygonAmoy
-const REQUIRED_CHAIN_ID = REQUIRED_CHAIN.id
-const REQUIRED_CHAIN_LABEL = TARGET_CHAIN_MODE === 'polygon'
-  ? 'Polygon Mainnet (137)'
-  : 'Polygon Amoy Testnet (80002)'
+const EMAIL_STORAGE_TTL = 1000 * 60 * 60 * 24 * 3
 const AMOY_CHAIN_HEX = `0x${polygonAmoy.id.toString(16)}`
 const AMOY_ADD_PARAMS = {
   chainId: AMOY_CHAIN_HEX,
@@ -77,10 +65,6 @@ interface ActionPromptProps {
 }
 
 function getInjectedProvider(): Eip1193Provider | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
   const maybeProvider = (
     window as Window & { ethereum?: Eip1193Provider }
   ).ethereum
@@ -186,12 +170,11 @@ function ActionPromptWalletIcon() {
   }
 
   return (
-    <Image
+    <img
       src={walletIconUrl}
       alt={walletName ? `${walletName} wallet icon` : 'Connected wallet icon'}
       width={64}
       height={64}
-      unoptimized
       className="size-16 rounded-2xl object-cover"
       onError={() => setWalletIconLoadFailed(true)}
     />
@@ -199,6 +182,17 @@ function ActionPromptWalletIcon() {
 }
 
 export function KeyGenerator() {
+  const runtimeConfig = useRuntimeConfig()
+  const siteName = runtimeConfig.siteName.trim() || 'Kuest'
+  const targetChainMode = runtimeConfig.kuestChainMode === 'polygon'
+    ? 'polygon'
+    : 'amoy'
+  const requiredChain = targetChainMode === 'polygon' ? polygon : polygonAmoy
+  const requiredChainId = requiredChain.id
+  const requiredChainLabel = targetChainMode === 'polygon'
+    ? 'Polygon Mainnet (137)'
+    : 'Polygon Amoy Testnet (80002)'
+
   const account = useAccount()
   const { disconnect, status: disconnectStatus } = useDisconnect()
   const { switchChain, status: switchStatus } = useSwitchChain()
@@ -210,7 +204,7 @@ export function KeyGenerator() {
     = account.status === 'connected' && Boolean(account.address)
   const onRequiredChain
     = isConnected && account.chainId !== undefined
-      ? account.chainId === REQUIRED_CHAIN_ID
+      ? account.chainId === requiredChainId
       : false
 
   const [bundle, setBundle] = useState<KeyBundle | null>(null)
@@ -232,9 +226,6 @@ export function KeyGenerator() {
   const keyManagementDisabled = !bundle
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
     const saved = window.localStorage.getItem(EMAIL_STORAGE_KEY)
     if (saved) {
       try {
@@ -278,9 +269,6 @@ export function KeyGenerator() {
 
   function updateEmailDraft(value: string) {
     setEmailDraft(value)
-    if (typeof window === 'undefined') {
-      return
-    }
     const trimmed = value.trim()
     if (trimmed) {
       window.localStorage.setItem(
@@ -320,7 +308,7 @@ export function KeyGenerator() {
     }
 
     if (onRequiredChain) {
-      setFlowInfo(`${REQUIRED_CHAIN_LABEL} is already active.`)
+      setFlowInfo(`${requiredChainLabel} is already active.`)
       return true
     }
 
@@ -333,12 +321,12 @@ export function KeyGenerator() {
         )
       }
 
-      await switchChain({ chainId: REQUIRED_CHAIN_ID })
-      setFlowInfo(`${REQUIRED_CHAIN_LABEL} is active.`)
+      await switchChain({ chainId: requiredChainId })
+      setFlowInfo(`${requiredChainLabel} is active.`)
       return true
     }
     catch (error) {
-      if (REQUIRED_CHAIN_ID === polygonAmoy.id && isMissingChainError(error)) {
+      if (requiredChainId === polygonAmoy.id && isMissingChainError(error)) {
         try {
           const provider = getInjectedProvider()
           if (!provider) {
@@ -369,12 +357,11 @@ export function KeyGenerator() {
           return false
         }
       }
-      else {
-        setFlowError(
-          getErrorMessage(error, `Unable to switch to ${REQUIRED_CHAIN_LABEL}.`),
-        )
-        return false
-      }
+
+      setFlowError(
+        getErrorMessage(error, `Unable to switch to ${requiredChainLabel}.`),
+      )
+      return false
     }
     finally {
       setIsEnsuringNetwork(false)
@@ -406,9 +393,6 @@ export function KeyGenerator() {
       .finally(() => {
         setAutoProceedAfterConnect(false)
       })
-    // We intentionally react to connection/chain/signing state transitions.
-    // Handler identities are recreated on render and are not used as effect triggers.
-    // eslint-disable-next-line react/exhaustive-deps
   }, [
     autoProceedAfterConnect,
     isConnected,
@@ -420,7 +404,7 @@ export function KeyGenerator() {
   ])
 
   useEffect(() => {
-    if (!flowError || typeof window === 'undefined') {
+    if (!flowError) {
       return
     }
 
@@ -472,7 +456,7 @@ export function KeyGenerator() {
       return
     }
     if (!onRequiredChain) {
-      setFlowError(`Switch to ${REQUIRED_CHAIN_LABEL} before signing.`)
+      setFlowError(`Switch to ${requiredChainLabel} before signing.`)
       return
     }
 
@@ -537,25 +521,16 @@ export function KeyGenerator() {
       const trimmedEmail = emailDraft.trim()
       if (trimmedEmail) {
         try {
-          const supabase = createSupabaseClient()
-          const { error } = await supabase.from('key_emails').insert({
-            api_key: result.apiKey,
+          const emailResult = await saveKeyEmail({
+            apiKey: result.apiKey,
             email: trimmedEmail,
           })
 
-          if (error) {
-            if (error.code === '23505') {
-              setEmailNotice('Email already saved for this key.')
-            }
-            else {
-              throw new Error(
-                error.message ?? 'Supabase rejected this request.',
-              )
-            }
-          }
-          else {
-            setEmailNotice('Saved. You can revoke any time.')
-          }
+          setEmailNotice(
+            emailResult.status === 'duplicate'
+              ? 'Email already saved for this key.'
+              : 'Saved. You can revoke any time.',
+          )
           updateEmailDraft(trimmedEmail)
         }
         catch (error) {
@@ -662,7 +637,7 @@ export function KeyGenerator() {
   const networkActionPending = isEnsuringNetwork || switchStatus === 'pending'
   const canSign
     = isConnected && onRequiredChain && !isSigning && !networkActionPending
-  const chainStepLabel = TARGET_CHAIN_MODE === 'amoy'
+  const chainStepLabel = targetChainMode === 'amoy'
     ? 'Activate Polygon Amoy'
     : 'Activate Polygon Mainnet'
   const currentStep = !isConnected
@@ -678,12 +653,12 @@ export function KeyGenerator() {
         ? {
             number: 2,
             title: chainStepLabel,
-            description: TARGET_CHAIN_MODE === 'amoy'
+            description: targetChainMode === 'amoy'
               ? 'We will try to switch automatically and add Amoy if needed.'
               : 'Switch network before signing.',
             actionLabel: networkActionPending
               ? 'Switching network...'
-              : TARGET_CHAIN_MODE === 'amoy'
+              : targetChainMode === 'amoy'
                 ? 'Activate Amoy'
                 : 'Switch network',
             action: handleEnsureRequiredNetwork,
@@ -727,12 +702,12 @@ export function KeyGenerator() {
           <div className="mb-6 flex justify-center">
             <div className="flex items-center gap-3 text-foreground">
               <SiteLogoIcon
-                alt={`${SITE_NAME} logo`}
+                alt={`${siteName} logo`}
                 className="size-[1.7rem]"
                 imageClassName="object-contain"
                 size={32}
               />
-              <span className="text-2xl font-semibold tracking-tight">{SITE_NAME}</span>
+              <span className="text-2xl font-semibold tracking-tight">{siteName}</span>
             </div>
           </div>
           <h1 className="mt-3 text-center text-3xl font-semibold text-foreground sm:text-4xl">

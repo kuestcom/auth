@@ -1,7 +1,6 @@
-export interface KeyBundle {
-  apiKey: string
-  apiSecret: string
-  passphrase: string
+import type { KuestKeyBundle } from '../../shared/api'
+
+export interface KeyBundle extends KuestKeyBundle {
   address: string
 }
 
@@ -9,7 +8,4 @@ export type GeneratedKey = KeyBundle & {
   createdAt?: string
 }
 
-export interface KuestError {
-  message: string
-  status?: number
-}
+export type { KuestKeyMetadata } from '../../shared/api'
