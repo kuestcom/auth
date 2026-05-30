@@ -1,0 +1,19 @@
+minimumReleaseAge: 1440
+shellEmulator: true
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  # slow-redact is pinned through pino -> @walletconnect/logger.
+  - slow-redact@0.3.2
+blockExoticSubdeps: true
+allowBuilds:
+  '@reown/appkit': false
+  bufferutil: false
+  esbuild: true
+  keccak: false
+  sharp: false
+  utf-8-validate: false
+  workerd: false
+
+overrides:
+  '@walletconnect/relay-auth>@noble/curves': 1.8.1
+  '@walletconnect/relay-auth>@noble/hashes': 1.7.1

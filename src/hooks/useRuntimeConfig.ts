@@ -1,5 +1,5 @@
-import { createContext, useContext } from 'react'
 import type { RuntimeConfig } from '@/types/runtime-config'
+import { createContext, use } from 'react'
 
 export interface RuntimeConfigState {
   config: RuntimeConfig | null
@@ -14,7 +14,7 @@ export const RuntimeConfigContext = createContext<RuntimeConfigState>({
 })
 
 export function useRuntimeConfigState() {
-  return useContext(RuntimeConfigContext)
+  return use(RuntimeConfigContext)
 }
 
 export function useRuntimeConfig() {

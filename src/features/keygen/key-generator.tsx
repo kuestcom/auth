@@ -1,4 +1,6 @@
+import type { UseAccountReturnType } from 'wagmi'
 import type { KeyBundle } from '@/types/keygen'
+import type { RuntimeConfig } from '@/types/runtime-config'
 import { useWalletInfo } from '@reown/appkit/react'
 import {
   CheckIcon,
@@ -21,7 +23,6 @@ import { KeysPanel } from '@/components/keys-panel'
 import { SiteLogoIcon } from '@/components/site-logo-icon'
 import { useAppKit } from '@/hooks/useAppKit'
 import { useRuntimeConfig } from '@/hooks/useRuntimeConfig'
-import { shortenAddress } from '@/lib/format'
 import {
   createKuestKey,
   listKuestKeyMetadata,
@@ -30,6 +31,7 @@ import {
   revokeKuestKey,
   saveKeyEmail,
 } from '@/lib/api'
+import { shortenAddress } from '@/lib/format'
 
 const EMAIL_STORAGE_KEY = 'kuest-email'
 const EMAIL_STORAGE_TTL = 1000 * 60 * 60 * 24 * 3
@@ -62,6 +64,11 @@ interface ActionPromptProps {
   showConnectedWalletIcon?: boolean
   allowClose?: boolean
   onClose?: () => void
+}
+
+interface KeyGeneratorContentProps {
+  account: UseAccountReturnType
+  runtimeConfig: RuntimeConfig
 }
 
 function getInjectedProvider(): Eip1193Provider | null {
@@ -99,6 +106,39 @@ function isMissingChainError(error: unknown) {
     || causeMessage.includes('4902')
     || message.includes('unrecognized chain')
     || causeMessage.includes('unrecognized chain')
+}
+
+function readStoredEmailDraft() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  const saved = window.localStorage.getItem(EMAIL_STORAGE_KEY)
+  if (!saved) {
+    return ''
+  }
+
+  try {
+    const parsed = JSON.parse(saved) as {
+      value?: string
+      savedAt?: number
+    }
+    if (!parsed?.value) {
+      return ''
+    }
+
+    const age = Date.now() - (parsed.savedAt ?? 0)
+    if (age < EMAIL_STORAGE_TTL) {
+      return parsed.value
+    }
+
+    window.localStorage.removeItem(EMAIL_STORAGE_KEY)
+  }
+  catch {
+    window.localStorage.removeItem(EMAIL_STORAGE_KEY)
+  }
+
+  return ''
 }
 
 function ActionPrompt({
@@ -157,13 +197,10 @@ function ActionPrompt({
 
 function ActionPromptWalletIcon() {
   const { walletInfo } = useWalletInfo()
-  const [walletIconLoadFailed, setWalletIconLoadFailed] = useState(false)
+  const [failedWalletIconUrl, setFailedWalletIconUrl] = useState<string | null>(null)
   const walletName = typeof walletInfo?.name === 'string' ? walletInfo.name : undefined
   const walletIconUrl = typeof walletInfo?.icon === 'string' ? walletInfo.icon.trim() : ''
-
-  useEffect(() => {
-    setWalletIconLoadFailed(false)
-  }, [walletIconUrl])
+  const walletIconLoadFailed = failedWalletIconUrl === walletIconUrl
 
   if (!walletIconUrl || walletIconLoadFailed) {
     return <WalletIcon className="size-16 text-primary" strokeWidth={1.7} />
@@ -176,13 +213,26 @@ function ActionPromptWalletIcon() {
       width={64}
       height={64}
       className="size-16 rounded-2xl object-cover"
-      onError={() => setWalletIconLoadFailed(true)}
+      onError={() => setFailedWalletIconUrl(walletIconUrl)}
     />
   )
 }
 
 export function KeyGenerator() {
   const runtimeConfig = useRuntimeConfig()
+  const account = useAccount()
+  const flowKey = account.address ?? 'anonymous'
+
+  return (
+    <KeyGeneratorContent
+      key={flowKey}
+      account={account}
+      runtimeConfig={runtimeConfig}
+    />
+  )
+}
+
+function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProps) {
   const siteName = runtimeConfig.siteName.trim() || 'Kuest'
   const targetChainMode = runtimeConfig.kuestChainMode === 'polygon'
     ? 'polygon'
@@ -193,7 +243,6 @@ export function KeyGenerator() {
     ? 'Polygon Mainnet (137)'
     : 'Polygon Amoy Testnet (80002)'
 
-  const account = useAccount()
   const { disconnect, status: disconnectStatus } = useDisconnect()
   const { switchChain, status: switchStatus } = useSwitchChain()
   const { signTypedDataAsync } = useSignTypedData()
@@ -212,60 +261,18 @@ export function KeyGenerator() {
   const [keysLoading, setKeysLoading] = useState(false)
   const [keysError, setKeysError] = useState<string | null>(null)
   const [keysHelper, setKeysHelper] = useState<string | null>(null)
-  const [emailDraft, setEmailDraft] = useState('')
+  const [emailDraft, setEmailDraft] = useState(readStoredEmailDraft)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [flowError, setFlowError] = useState<string | null>(null)
   const [flowInfo, setFlowInfo] = useState<string | null>(null)
   const [isSigning, setIsSigning] = useState(false)
   const [isEnsuringNetwork, setIsEnsuringNetwork] = useState(false)
-  const [connectPromptOpen, setConnectPromptOpen] = useState(false)
-  const [autoProceedAfterConnect, setAutoProceedAfterConnect] = useState(false)
+  const [connectPromptRequested, setConnectPromptRequested] = useState(false)
   const [emailNotice, setEmailNotice] = useState<string | null>(null)
   const [showKeyManagement, setShowKeyManagement] = useState(false)
 
   const keyManagementDisabled = !bundle
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem(EMAIL_STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as {
-          value?: string
-          savedAt?: number
-        }
-        if (parsed?.value) {
-          const age = Date.now() - (parsed.savedAt ?? 0)
-          if (age < EMAIL_STORAGE_TTL) {
-            setEmailDraft(parsed.value)
-          }
-          else {
-            window.localStorage.removeItem(EMAIL_STORAGE_KEY)
-          }
-        }
-      }
-      catch {
-        window.localStorage.removeItem(EMAIL_STORAGE_KEY)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (account.status === 'disconnected') {
-      setBundle(null)
-      setKeys([])
-      setKeysHelper(null)
-      setKeysError(null)
-      setEmailNotice(null)
-      setConnectPromptOpen(false)
-      setAutoProceedAfterConnect(false)
-    }
-  }, [account.status])
-
-  useEffect(() => {
-    if (isConnected) {
-      setConnectPromptOpen(false)
-    }
-  }, [isConnected])
+  const connectPromptOpen = connectPromptRequested && !isConnected
 
   function updateEmailDraft(value: string) {
     setEmailDraft(value)
@@ -284,8 +291,7 @@ export function KeyGenerator() {
   async function handleWalletConnectClick() {
     setFlowError(null)
     setFlowInfo(null)
-    setConnectPromptOpen(true)
-    setAutoProceedAfterConnect(true)
+    setConnectPromptRequested(true)
     try {
       await openAppKit()
     }
@@ -293,8 +299,7 @@ export function KeyGenerator() {
       const message
         = error instanceof Error ? error.message : 'Failed to open wallet modal.'
       setFlowError(message)
-      setConnectPromptOpen(false)
-      setAutoProceedAfterConnect(false)
+      setConnectPromptRequested(false)
     }
   }
 
@@ -368,42 +373,7 @@ export function KeyGenerator() {
     }
   }
 
-  useEffect(() => {
-    if (!autoProceedAfterConnect || !isConnected || bundle) {
-      return
-    }
-    if (isEnsuringNetwork || switchStatus === 'pending' || isSigning) {
-      return
-    }
-
-    if (!onRequiredChain) {
-      handleEnsureRequiredNetwork()
-        .then((ok) => {
-          if (!ok) {
-            setAutoProceedAfterConnect(false)
-          }
-        })
-        .catch(() => {
-          setAutoProceedAfterConnect(false)
-        })
-      return
-    }
-
-    handleSignAndGenerate()
-      .finally(() => {
-        setAutoProceedAfterConnect(false)
-      })
-  }, [
-    autoProceedAfterConnect,
-    isConnected,
-    bundle,
-    isEnsuringNetwork,
-    switchStatus,
-    isSigning,
-    onRequiredChain,
-  ])
-
-  useEffect(() => {
+  useEffect(function clearFlowErrorOnInteraction() {
     if (!flowError) {
       return
     }
@@ -963,7 +933,7 @@ export function KeyGenerator() {
         description="Open your wallet and approve the connection to continue."
         showConnectedWalletIcon={isAppKitReady}
         allowClose
-        onClose={() => setConnectPromptOpen(false)}
+        onClose={() => setConnectPromptRequested(false)}
       />
 
       <ActionPrompt

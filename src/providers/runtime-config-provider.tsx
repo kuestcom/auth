@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
-import { getRuntimeConfig } from '@/lib/api'
-import { RuntimeConfigContext } from '@/hooks/useRuntimeConfig'
 import type { RuntimeConfig } from '@/types/runtime-config'
+import { useEffect, useMemo, useState } from 'react'
+import { RuntimeConfigContext } from '@/hooks/useRuntimeConfig'
+import { getRuntimeConfig } from '@/lib/api'
 
 interface RuntimeConfigProviderProps {
   children: ReactNode
@@ -13,7 +13,7 @@ export function RuntimeConfigProvider({ children }: RuntimeConfigProviderProps) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  useEffect(function loadRuntimeConfig() {
     let active = true
 
     getRuntimeConfig()
@@ -55,8 +55,8 @@ export function RuntimeConfigProvider({ children }: RuntimeConfigProviderProps) 
   )
 
   return (
-    <RuntimeConfigContext.Provider value={value}>
+    <RuntimeConfigContext value={value}>
       {children}
-    </RuntimeConfigContext.Provider>
+    </RuntimeConfigContext>
   )
 }

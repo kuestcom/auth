@@ -1,10 +1,12 @@
 import type { AppKit, OpenOptions, Views } from '@reown/appkit/react'
 import type { ReactNode } from 'react'
+import type { RuntimeConfig } from '@/types/runtime-config'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { createAppKit } from '@reown/appkit/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { AppKitContext, defaultAppKitValue } from '@/hooks/useAppKit'
+import { useRuntimeConfig } from '@/hooks/useRuntimeConfig'
 import {
   appKitFeatures,
   appKitThemeVariables,
@@ -12,8 +14,6 @@ import {
   featuredWalletIds,
   networks,
 } from '@/lib/appkit'
-import { useRuntimeConfig } from '@/hooks/useRuntimeConfig'
-import type { RuntimeConfig } from '@/types/runtime-config'
 
 let appKitInstance: AppKit | null = null
 let appKitProjectId: string | null = null
@@ -56,7 +56,6 @@ function getOrCreateAppKit(
 
 export default function AppKitProvider({ children }: { children: ReactNode }) {
   const config = useRuntimeConfig()
-  const [appKitValue, setAppKitValue] = useState(defaultAppKitValue)
 
   const wagmiAdapter = useMemo(
     () => new WagmiAdapter({
@@ -67,19 +66,17 @@ export default function AppKitProvider({ children }: { children: ReactNode }) {
     [config.reownAppKitProjectId],
   )
 
-  useEffect(() => {
+  const appKitValue = useMemo(() => {
     if (!config.reownAppKitProjectId) {
-      setAppKitValue(defaultAppKitValue)
-      return
+      return defaultAppKitValue
     }
 
     const instance = getOrCreateAppKit(config, wagmiAdapter)
     if (!instance) {
-      setAppKitValue(defaultAppKitValue)
-      return
+      return defaultAppKitValue
     }
 
-    setAppKitValue({
+    return {
       open: async (options?: OpenOptions<Views>) => {
         await instance.open(options)
       },
@@ -87,14 +84,14 @@ export default function AppKitProvider({ children }: { children: ReactNode }) {
         await instance.close()
       },
       isReady: true,
-    })
+    }
   }, [config, wagmiAdapter])
 
   return (
     <WagmiProvider config={wagmiAdapter.wagmiConfig as never}>
-      <AppKitContext.Provider value={appKitValue}>
+      <AppKitContext value={appKitValue}>
         {children}
-      </AppKitContext.Provider>
+      </AppKitContext>
     </WagmiProvider>
   )
 }

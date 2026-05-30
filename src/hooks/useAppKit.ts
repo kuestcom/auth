@@ -1,5 +1,5 @@
 import type { OpenOptions, Views } from '@reown/appkit/react'
-import { createContext, useContext } from 'react'
+import { createContext, use } from 'react'
 
 export interface AppKitValue {
   open: (options?: OpenOptions<Views>) => Promise<void>
@@ -16,5 +16,5 @@ export const defaultAppKitValue: AppKitValue = {
 export const AppKitContext = createContext<AppKitValue>(defaultAppKitValue)
 
 export function useAppKit() {
-  return useContext(AppKitContext)
+  return use(AppKitContext)
 }
