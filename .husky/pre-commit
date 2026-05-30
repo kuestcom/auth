@@ -1,2 +1,5 @@
+#!/usr/bin/env sh
+set -e
+
 pnpm exec knip --no-config-hints
 pnpm exec lint-staged

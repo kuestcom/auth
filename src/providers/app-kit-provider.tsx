@@ -2,8 +2,7 @@ import type { AppKit, OpenOptions, Views } from '@reown/appkit/react'
 import type { ReactNode } from 'react'
 import type { RuntimeConfig } from '@/types/runtime-config'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { createAppKit } from '@reown/appkit/react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { AppKitContext, defaultAppKitValue } from '@/hooks/useAppKit'
 import { useRuntimeConfig } from '@/hooks/useRuntimeConfig'
@@ -18,7 +17,7 @@ import {
 let appKitInstance: AppKit | null = null
 let appKitProjectId: string | null = null
 
-function getOrCreateAppKit(
+async function getOrCreateAppKit(
   config: RuntimeConfig,
   wagmiAdapter: WagmiAdapter,
 ) {
@@ -34,6 +33,11 @@ function getOrCreateAppKit(
   }
 
   try {
+    const { createAppKit } = await import('@reown/appkit/react')
+    if (appKitInstance && appKitProjectId === config.reownAppKitProjectId) {
+      return appKitInstance
+    }
+
     appKitInstance = createAppKit({
       projectId: config.reownAppKitProjectId,
       adapters: [wagmiAdapter],
@@ -56,6 +60,7 @@ function getOrCreateAppKit(
 
 export default function AppKitProvider({ children }: { children: ReactNode }) {
   const config = useRuntimeConfig()
+  const [appKitValue, setAppKitValue] = useState(defaultAppKitValue)
 
   const wagmiAdapter = useMemo(
     () => new WagmiAdapter({
@@ -66,24 +71,35 @@ export default function AppKitProvider({ children }: { children: ReactNode }) {
     [config.reownAppKitProjectId],
   )
 
-  const appKitValue = useMemo(() => {
-    if (!config.reownAppKitProjectId) {
-      return defaultAppKitValue
+  useEffect(function initializeAppKit() {
+    let active = true
+
+    async function setInitializedAppKitValue() {
+      const instance = await getOrCreateAppKit(config, wagmiAdapter)
+      if (!active) {
+        return
+      }
+
+      if (!instance) {
+        setAppKitValue(defaultAppKitValue)
+        return
+      }
+
+      setAppKitValue({
+        open: async (options?: OpenOptions<Views>) => {
+          await instance.open(options)
+        },
+        close: async () => {
+          await instance.close()
+        },
+        isReady: true,
+      })
     }
 
-    const instance = getOrCreateAppKit(config, wagmiAdapter)
-    if (!instance) {
-      return defaultAppKitValue
-    }
+    void setInitializedAppKitValue()
 
-    return {
-      open: async (options?: OpenOptions<Views>) => {
-        await instance.open(options)
-      },
-      close: async () => {
-        await instance.close()
-      },
-      isReady: true,
+    return () => {
+      active = false
     }
   }, [config, wagmiAdapter])
 
