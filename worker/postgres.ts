@@ -8,6 +8,7 @@ interface PostgresError extends Error {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const EMAIL_PATTERN = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])$/i
 
 function getPostgresUrl(env: Env) {
   const value = env.POSTGRES_URL?.trim()
@@ -22,9 +23,22 @@ function validateSaveKeyEmailInput(input: SaveKeyEmailInput) {
     throw new HttpError(400, 'apiKey must be a valid UUID.')
   }
 
-  if (input.email.indexOf('@') <= 0) {
+  if (!isValidEmail(input.email)) {
     throw new HttpError(400, 'email must be a valid email address.')
   }
+}
+
+function isValidEmail(email: string) {
+  const atMatches = email.match(/@/g)
+  const [localPart] = email.split('@')
+
+  return email.length <= 254
+    && atMatches?.length === 1
+    && localPart.length <= 64
+    && !localPart.startsWith('.')
+    && !localPart.endsWith('.')
+    && !localPart.includes('..')
+    && EMAIL_PATTERN.test(email)
 }
 
 function clientInputErrorFromPostgres(error: unknown) {
