@@ -152,8 +152,8 @@ Request:
 
 Worker behavior:
 
-- Inserts `{ api_key, email }` into `public.key_emails` through Supabase PostgREST.
-- Uses `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+- Inserts `{ api_key, email }` into `public.key_emails` through PostgreSQL.
+- Uses `POSTGRES_URL`.
 - Translates unique constraint conflicts into `duplicate`.
 
 Response:

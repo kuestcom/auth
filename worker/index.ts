@@ -16,8 +16,8 @@ import {
   listKuestKeyMetadata,
   revokeKuestKey,
 } from './kuest'
+import { saveKeyEmail } from './postgres'
 import { getRuntimeConfig } from './runtime-config'
-import { saveKeyEmail } from './supabase'
 
 function parseCreateKuestKeyInput(payload: unknown): CreateKuestKeyInput {
   const record = requireRecord(payload)
