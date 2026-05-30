@@ -11,7 +11,7 @@ function firstEnv(env: Env, ...keys: Array<keyof Env>) {
   return ''
 }
 
-export function flagEnabled(value: string | undefined) {
+function flagEnabled(value: string | undefined) {
   const normalized = value?.trim().toLowerCase()
   return normalized === '1'
     || normalized === 'true'
