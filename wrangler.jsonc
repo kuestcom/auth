@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "kuest-auth",
+  "name": "auth",
   "main": "worker/index.ts",
   "compatibility_date": "2026-05-29",
   "compatibility_flags": [
