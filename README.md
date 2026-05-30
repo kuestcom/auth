@@ -1,61 +1,70 @@
-<h1 align="center">
-  <img src="https://github.com/user-attachments/assets/0cc687fb-89c4-43fa-a056-d89c307215ad" alt="Kuest" height="96" /><br/>
-  Kuest Auth Key Generator
-</h1>
+# Kuest Auth Worker
 
-Single-page app that lets a Kuest wallet owner mint API credentials (L1 signature) and manage keys (L2 HMAC) against `https://clob.kuest.com`.
+Single-page Kuest API credential generator built for Cloudflare Workers.
 
-### Required environment variables
+This is a new implementation without Next.js, Vercel runtime, or OpenNext. The UI is a React/Vite static asset bundle, and all `/api/*` requests are handled by a native Cloudflare Worker.
 
-Configure these before running locally or deploying to Vercel:
+## Runtime
+
+- UI: React + Vite + Tailwind CSS.
+- Wallet: Reown AppKit + Wagmi.
+- Server: Cloudflare Worker TypeScript.
+- Database: Supabase via PostgREST insert into `public.key_emails`.
+
+## Environment Variables
+
+Set these as Cloudflare Worker variables/secrets. For local development, copy `.dev.vars.example` to `.dev.vars`.
 
 | Variable | Description |
 | --- | --- |
-| `NEXT_PUBLIC_KUEST_CHAIN_MODE` | Required signing chain: `amoy` (default) or `polygon` |
-| `NEXT_PUBLIC_SITE_NAME` | Brand name shown in header and wallet metadata |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon service key |
-| `NEXT_PUBLIC_REOWN_APPKIT_PROJECT_ID` | Reown / WalletConnect v2 project id (enables QR wallets) |
-| `NEXT_PUBLIC_APP_URL` | Public base URL of this app (used for WalletConnect metadata) |
-| `NEXT_PUBLIC_APP_ICON` | Absolute URL to an app icon (WalletConnect metadata) |
+| `KUEST_CHAIN_MODE` | `amoy` or `polygon`; defaults to `amoy` |
+| `SITE_NAME` | Brand name shown in the UI |
+| `REOWN_APPKIT_PROJECT_ID` | Reown / WalletConnect project id |
+| `APP_URL` | Public app URL used in wallet metadata |
+| `APP_ICON` | Public app icon URL used in wallet metadata |
+| `CLOB_URL` | Kuest CLOB base URL, usually `https://clob.kuest.com` |
+| `RELAYER_URL` | Kuest relayer base URL, usually `https://relayer.kuest.com` |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anon or publishable key with insert RLS access |
+| `KUEST_DEBUG_ERRORS` | `true` to include raw Kuest error fragments in UI messages |
 
-Use `.env.example` as a starting point and create a `.env.local` file (Next.js automatically loads it):
+Legacy `NEXT_PUBLIC_*` variable names are accepted by the Worker for easier migration, but new Cloudflare deployments should use the names above.
 
-```bash
-NEXT_PUBLIC_KUEST_CHAIN_MODE=amoy
-NEXT_PUBLIC_SITE_NAME=Kuest
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_REOWN_APPKIT_PROJECT_ID=...
-NEXT_PUBLIC_APP_URL=https://auth.kuest.com
-NEXT_PUBLIC_APP_ICON=https://auth.kuest.com/kuest-logo.svg
-```
-
-### Supabase schema
-
-Apply the SQL migrations in `supabase/migrations` to create the anonymous insert-only table used to store generated key contact data:
-
-```bash
-supabase db push
-```
-
-(Alternatively, run the file contents in the Supabase SQL editor.)
-
-### Local development
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` and connect a Polygon (Mainnet 137 or Amoy 80002) wallet. The generate flow will:
+`npm run dev` runs the Vite + Cloudflare Worker dev environment. The app fetches runtime config from `/api/config`, so `.dev.vars` must include `REOWN_APPKIT_PROJECT_ID`.
 
-1. Connect wallet via Reown (WalletConnect v2).
-2. Switch to the required chain (`NEXT_PUBLIC_KUEST_CHAIN_MODE`; default `amoy`).
-3. Sign the EIP-712 `ClobAuthDomain` payload and mint API credentials.
-4. If an email was provided in advanced options, store it with the generated API key in Supabase.
-5. Manage keys (list / revoke) via L2 HMAC signing (`timestamp + method + path + body`, excluding query strings).
+## Validation
 
-### Deploying
+```bash
+npm run check
+npm run build
+```
 
-Deploy to Vercel as a standard Next.js project. Set the environment variables above in the Vercel dashboard and (optionally) run the Supabase migration via CI before first deployment.
+## Deploy
+
+```bash
+npm run deploy
+```
+
+The build emits:
+
+- `dist/client`: static UI assets.
+- `dist/kuest_auth`: Worker bundle and generated Wrangler config.
+
+## Supabase
+
+The current migrations are copied into `supabase/migrations`. Apply them before first deploy:
+
+```bash
+supabase db push
+```
+
+## API Contracts
+
+See [docs/api.md](docs/api.md).

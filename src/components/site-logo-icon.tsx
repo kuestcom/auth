@@ -1,5 +1,3 @@
-import Image from 'next/image'
-
 interface SiteLogoIconProps {
   className?: string
   imageClassName?: string
@@ -17,7 +15,7 @@ export function SiteLogoIcon({
 }: SiteLogoIconProps) {
   return (
     <span className={className}>
-      <Image
+      <img
         src={logoImageUrl}
         alt={alt}
         width={size}

@@ -2,7 +2,40 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@font-face {
+  font-family: 'Open Sauce One';
+  src: url('/fonts/open-sauce-one-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sauce One';
+  src: url('/fonts/open-sauce-one-latin-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sauce One';
+  src: url('/fonts/open-sauce-one-latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sauce One';
+  src: url('/fonts/open-sauce-one-latin-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
+  --font-sans: 'Open Sauce One', ui-sans-serif, system-ui, sans-serif;
   --yes: oklch(62.7% 0.194 149.214);
   --yes-foreground: oklch(52.7% 0.154 150.069);
   --no: oklch(63.7% 0.237 25.331);
@@ -87,6 +120,7 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-sans);
   --color-yes: var(--yes);
   --color-yes-foreground: var(--yes-foreground);
   --color-no: var(--no);
@@ -134,9 +168,12 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    background: var(--background);
+  }
+
   body {
-    @apply bg-background text-foreground;
-    min-height: 100vh;
+    @apply min-h-screen bg-background font-sans text-foreground;
   }
 
   button:not([disabled]),
@@ -169,57 +206,8 @@
   @apply mx-auto max-w-[1332px] px-4 2xl:px-0;
 }
 
-@utility animate-order-shake {
-  animation: order-shake 0.28s ease-in-out;
-}
-
 @utility text-2xs {
   font-size: 10px;
-}
-
-@utility scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@keyframes prediction-chart-radar {
-  0% {
-    transform: scale(0.4);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.6);
-    opacity: 0.25;
-  }
-  100% {
-    transform: scale(1.8);
-    opacity: 0;
-  }
-}
-
-@keyframes order-shake {
-  0% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-4px);
-  }
-  40% {
-    transform: translateX(4px);
-  }
-  60% {
-    transform: translateX(-3px);
-  }
-  80% {
-    transform: translateX(3px);
-  }
-  100% {
-    transform: translateX(0);
-  }
 }
 
 @keyframes auth-success-pop {

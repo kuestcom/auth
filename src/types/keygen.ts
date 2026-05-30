@@ -9,7 +9,8 @@ export type GeneratedKey = KeyBundle & {
   createdAt?: string
 }
 
-export interface KuestError {
-  message: string
-  status?: number
+export interface KuestKeyMetadata {
+  apiKey: string
+  nonce: string | null
+  status: string
 }

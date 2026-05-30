@@ -1,48 +1,48 @@
-'use client'
-
-import type { AppKit } from '@reown/appkit/react'
+import type { AppKit, OpenOptions, Views } from '@reown/appkit/react'
 import type { ReactNode } from 'react'
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { createAppKit } from '@reown/appkit/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { AppKitContext, defaultAppKitValue } from '@/hooks/useAppKit'
 import {
   appKitFeatures,
-  appKitMetadata,
   appKitThemeVariables,
+  buildAppKitMetadata,
   featuredWalletIds,
   networks,
-  projectId,
-  wagmiAdapter,
-  wagmiConfig,
 } from '@/lib/appkit'
+import { useRuntimeConfig } from '@/hooks/useRuntimeConfig'
+import type { RuntimeConfig } from '@/types/runtime-config'
 
 let appKitInstance: AppKit | null = null
+let appKitProjectId: string | null = null
 
-function isBrowser() {
-  return typeof window !== 'undefined'
-}
-
-function getOrCreateAppKit() {
-  if (!isBrowser()) {
+function getOrCreateAppKit(
+  config: RuntimeConfig,
+  wagmiAdapter: WagmiAdapter,
+) {
+  if (typeof window === 'undefined') {
     return null
   }
-  if (appKitInstance) {
+
+  if (appKitInstance && appKitProjectId === config.reownAppKitProjectId) {
     return appKitInstance
   }
 
   try {
     appKitInstance = createAppKit({
-      projectId: projectId!,
+      projectId: config.reownAppKitProjectId,
       adapters: [wagmiAdapter],
       networks,
-      metadata: appKitMetadata,
+      metadata: buildAppKitMetadata(config),
       themeMode: 'dark',
       themeVariables: appKitThemeVariables,
       features: appKitFeatures,
       featuredWalletIds,
       defaultAccountTypes: { eip155: 'eoa' },
     })
+    appKitProjectId = config.reownAppKitProjectId
     return appKitInstance
   }
   catch (error) {
@@ -52,16 +52,26 @@ function getOrCreateAppKit() {
 }
 
 export default function AppKitProvider({ children }: { children: ReactNode }) {
+  const config = useRuntimeConfig()
   const [appKitValue, setAppKitValue] = useState(defaultAppKitValue)
 
+  const wagmiAdapter = useMemo(
+    () => new WagmiAdapter({
+      ssr: false,
+      projectId: config.reownAppKitProjectId,
+      networks,
+    }),
+    [config.reownAppKitProjectId],
+  )
+
   useEffect(() => {
-    const instance = getOrCreateAppKit()
+    const instance = getOrCreateAppKit(config, wagmiAdapter)
     if (!instance) {
       return
     }
 
     setAppKitValue({
-      open: async (options) => {
+      open: async (options?: OpenOptions<Views>) => {
         await instance.open(options)
       },
       close: async () => {
@@ -69,13 +79,13 @@ export default function AppKitProvider({ children }: { children: ReactNode }) {
       },
       isReady: true,
     })
-  }, [])
+  }, [config, wagmiAdapter])
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <AppKitContext value={appKitValue}>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig as never}>
+      <AppKitContext.Provider value={appKitValue}>
         {children}
-      </AppKitContext>
+      </AppKitContext.Provider>
     </WagmiProvider>
   )
 }
