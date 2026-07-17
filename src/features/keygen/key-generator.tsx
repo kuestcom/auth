@@ -44,7 +44,7 @@ const AMOY_ADD_PARAMS = {
     symbol: 'POL',
     decimals: 18,
   },
-  rpcUrls: ['https://rpc-amoy.polygon.technology/'],
+  rpcUrls: ['https://polygon-amoy.drpc.org'],
   blockExplorerUrls: ['https://amoy.polygonscan.com/'],
 }
 
