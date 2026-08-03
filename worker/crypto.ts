@@ -1,10 +1,7 @@
 const textEncoder = new TextEncoder()
 
 function base64ToUint8Array(base64: string) {
-  const normalized = base64
-    .replace(/\s+/g, '')
-    .replace(/-/g, '+')
-    .replace(/_/g, '/')
+  const normalized = base64.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
   const binaryString = atob(normalized)
   const bytes = new Uint8Array(binaryString.length)
 
@@ -26,10 +23,7 @@ function toBase64Url(bytes: ArrayBuffer) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_')
 }
 
-export async function hmacSha256Base64Url(
-  secretBase64: string,
-  message: string,
-) {
+export async function hmacSha256Base64Url(secretBase64: string, message: string) {
   const secretBytes = base64ToUint8Array(secretBase64)
   const key = await crypto.subtle.importKey(
     'raw',
@@ -42,10 +36,6 @@ export async function hmacSha256Base64Url(
     ['sign'],
   )
 
-  const signature = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    textEncoder.encode(message),
-  )
+  const signature = await crypto.subtle.sign('HMAC', key, textEncoder.encode(message))
   return toBase64Url(signature)
 }

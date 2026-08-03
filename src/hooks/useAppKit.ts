@@ -1,4 +1,5 @@
 import type { OpenOptions, Views } from '@reown/appkit/react'
+
 import { createContext, use } from 'react'
 
 export interface AppKitValue {

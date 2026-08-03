@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
+
 import { useRuntimeConfigState } from '@/hooks/useRuntimeConfig'
 import AppKitProvider from '@/providers/app-kit-provider'
 import { RuntimeConfigProvider } from '@/providers/runtime-config-provider'
@@ -22,9 +24,7 @@ function RuntimeReady({ children }: AppProvidersProps) {
         <div className="container">
           <div className="mx-auto max-w-xl auth-panel p-6">
             <h1 className="text-xl font-semibold">Configuration error</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {error ?? 'Runtime config is not available.'}
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{error ?? 'Runtime config is not available.'}</p>
           </div>
         </div>
       </div>
@@ -41,9 +41,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     <RuntimeConfigProvider>
       <RuntimeReady>
         <QueryClientProvider client={queryClient}>
-          <div className="min-h-screen bg-background text-foreground">
-            {children}
-          </div>
+          <div className="min-h-screen bg-background text-foreground">{children}</div>
         </QueryClientProvider>
       </RuntimeReady>
     </RuntimeConfigProvider>

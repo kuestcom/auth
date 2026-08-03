@@ -1,6 +1,8 @@
+import postgres from 'postgres'
+
 import type { SaveKeyEmailInput } from '../shared/api'
 import type { Env } from './types'
-import postgres from 'postgres'
+
 import { HttpError } from './http'
 
 interface PostgresError extends Error {
@@ -8,7 +10,8 @@ interface PostgresError extends Error {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const EMAIL_PATTERN = /^[\w.!#$%&'*+/=?^`{|}~-]+@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i
+const EMAIL_PATTERN =
+  /^[\w.!#$%&'*+/=?^`{|}~-]+@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i
 
 function getPostgresUrl(env: Env) {
   const value = env.POSTGRES_URL?.trim()
@@ -32,13 +35,15 @@ function isValidEmail(email: string) {
   const atMatches = email.match(/@/g)
   const [localPart] = email.split('@')
 
-  return email.length <= 254
-    && atMatches?.length === 1
-    && localPart.length <= 64
-    && !localPart.startsWith('.')
-    && !localPart.endsWith('.')
-    && !localPart.includes('..')
-    && EMAIL_PATTERN.test(email)
+  return (
+    email.length <= 254 &&
+    atMatches?.length === 1 &&
+    localPart.length <= 64 &&
+    !localPart.startsWith('.') &&
+    !localPart.endsWith('.') &&
+    !localPart.includes('..') &&
+    EMAIL_PATTERN.test(email)
+  )
 }
 
 function clientInputErrorFromPostgres(error: unknown) {
@@ -73,8 +78,7 @@ export async function saveKeyEmail(env: Env, input: SaveKeyEmailInput) {
     `
 
     return { status: 'saved' as const }
-  }
-  catch (error) {
+  } catch (error) {
     if (error instanceof Error && (error as PostgresError).code === '23505') {
       return { status: 'duplicate' as const }
     }
@@ -89,8 +93,7 @@ export async function saveKeyEmail(env: Env, input: SaveKeyEmailInput) {
       message: error instanceof Error ? error.message : String(error),
     })
     throw new HttpError(502, 'Postgres rejected this request.')
-  }
-  finally {
+  } finally {
     await sql.end({ timeout: 1 })
   }
 }

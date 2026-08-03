@@ -21,10 +21,10 @@ For local development, copy `.dev.vars.example` to `.dev.vars`. For production, 
 
 Keep `.env.example` as a reminder of the non-public values required for redeploys.
 
-| Variable | Description |
-| --- | --- |
-| `REOWN_APPKIT_PROJECT_ID` | Reown / WalletConnect project id |
-| `POSTGRES_URL` | PostgreSQL connection string used by the Worker; include SSL settings if your provider requires them |
+| Variable                  | Description                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `REOWN_APPKIT_PROJECT_ID` | Reown / WalletConnect project id                                                                     |
+| `POSTGRES_URL`            | PostgreSQL connection string used by the Worker; include SSL settings if your provider requires them |
 
 ## Development
 
