@@ -1,5 +1,7 @@
-import type { KeyBundle } from '@/types/keygen'
 import { useMemo } from 'react'
+
+import type { KeyBundle } from '@/types/keygen'
+
 import { CopyButton } from '@/components/copy-button'
 
 interface EnvBlockProps {
@@ -26,11 +28,7 @@ export function EnvBlock({ bundle }: EnvBlockProps) {
 
   return (
     <div className="relative">
-      <CopyButton
-        value={credentialsBlock}
-        ariaLabel="Copy credentials block"
-        className="absolute top-3 right-3 z-10"
-      />
+      <CopyButton value={credentialsBlock} ariaLabel="Copy credentials block" className="absolute top-3 right-3 z-10" />
       <textarea
         value={credentialsBlock}
         readOnly

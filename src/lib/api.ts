@@ -12,28 +12,23 @@ import type {
 
 async function parseResponseError(response: Response) {
   try {
-    const payload = await response.json() as unknown
+    const payload = (await response.json()) as unknown
     if (payload && typeof payload === 'object') {
       const error = (payload as { error?: { message?: string } }).error
-      const message = error?.message
-        ?? (payload as { message?: string }).message
-        ?? (payload as { error?: string }).error
+      const message =
+        error?.message ?? (payload as { message?: string }).message ?? (payload as { error?: string }).error
       if (typeof message === 'string' && message.trim()) {
         return message
       }
     }
-  }
-  catch {
+  } catch {
     // Fall through to generic status text.
   }
 
   return response.statusText || 'Request failed.'
 }
 
-async function requestJson<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   if (init.body && !headers.has('content-type')) {
     headers.set('content-type', 'application/json')
@@ -49,7 +44,7 @@ async function requestJson<T>(
     throw new Error(await parseResponseError(response))
   }
 
-  return await response.json() as T
+  return (await response.json()) as T
 }
 
 export function getRuntimeConfig() {
@@ -59,40 +54,29 @@ export function getRuntimeConfig() {
 }
 
 export async function createKuestKey(input: CreateKuestKeyInput) {
-  const result = await requestJson<KuestKeyBundle>(
-    '/api/kuest/create-key',
-    {
-      method: 'POST',
-      body: JSON.stringify(input),
-    },
-  )
+  const result = await requestJson<KuestKeyBundle>('/api/kuest/create-key', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 
   return result
 }
 
 export async function listKuestKeyMetadata(auth: KuestAuthContext) {
-  const result = await requestJson<ListKuestKeysResponse>(
-    '/api/kuest/list-keys',
-    {
-      method: 'POST',
-      body: JSON.stringify(auth),
-    },
-  )
+  const result = await requestJson<ListKuestKeysResponse>('/api/kuest/list-keys', {
+    method: 'POST',
+    body: JSON.stringify(auth),
+  })
 
   return result.keys
 }
 
 export async function listKuestKeys(auth: KuestAuthContext) {
   const keys = await listKuestKeyMetadata(auth)
-  return keys
-    .filter(key => key.status === 'active')
-    .map(key => key.apiKey)
+  return keys.filter((key) => key.status === 'active').map((key) => key.apiKey)
 }
 
-export async function revokeKuestKey(
-  auth: KuestAuthContext,
-  apiKey: string,
-) {
+export async function revokeKuestKey(auth: KuestAuthContext, apiKey: string) {
   await requestJson<RevokeKuestKeyResponse>('/api/kuest/revoke-key', {
     method: 'POST',
     body: JSON.stringify({ auth, apiKey }),
@@ -115,8 +99,7 @@ function parseKuestNonce(value: string | null) {
   try {
     const parsed = BigInt(value)
     return parsed < BigInt(0) ? null : parsed
-  }
-  catch {
+  } catch {
     return null
   }
 }

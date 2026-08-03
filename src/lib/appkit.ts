@@ -1,22 +1,19 @@
 import type { AppKitNetwork } from '@reown/appkit/networks'
-import type { RuntimeConfig } from '@/types/runtime-config'
+
 import { polygon, polygonAmoy } from '@reown/appkit/networks'
+
+import type { RuntimeConfig } from '@/types/runtime-config'
 
 const metamaskWalletId = 'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96'
 
-export const networks = [polygon, polygonAmoy] as [
-  AppKitNetwork,
-  ...AppKitNetwork[],
-]
+export const networks = [polygon, polygonAmoy] as [AppKitNetwork, ...AppKitNetwork[]]
 
 export function buildAppKitMetadata(config: RuntimeConfig) {
   return {
     name: `${config.siteName} Auth`,
     description: `Generate ${config.siteName} API credentials.`,
     url: config.appUrl,
-    icons: [
-      config.appIcon,
-    ],
+    icons: [config.appIcon],
   }
 }
 

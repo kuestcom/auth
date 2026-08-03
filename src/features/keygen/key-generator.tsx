@@ -1,23 +1,15 @@
 import type { UseAccountReturnType } from 'wagmi'
-import type { KeyBundle } from '@/types/keygen'
-import type { RuntimeConfig } from '@/types/runtime-config'
+
 import { useWalletInfo } from '@reown/appkit/react'
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  Loader2Icon,
-  WalletIcon,
-  XIcon,
-} from 'lucide-react'
+import { CheckIcon, ChevronDownIcon, Loader2Icon, WalletIcon, XIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { UserRejectedRequestError } from 'viem'
-import {
-  useAccount,
-  useDisconnect,
-  useSignTypedData,
-  useSwitchChain,
-} from 'wagmi'
+import { useAccount, useDisconnect, useSignTypedData, useSwitchChain } from 'wagmi'
 import { polygon, polygonAmoy } from 'wagmi/chains'
+
+import type { KeyBundle } from '@/types/keygen'
+import type { RuntimeConfig } from '@/types/runtime-config'
+
 import { EnvBlock } from '@/components/env-block'
 import { KeysPanel } from '@/components/keys-panel'
 import { SiteLogoIcon } from '@/components/site-logo-icon'
@@ -49,7 +41,7 @@ const AMOY_ADD_PARAMS = {
 }
 
 interface Eip1193Provider {
-  request: (args: { method: string, params?: unknown[] }) => Promise<unknown>
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
 }
 
 interface ErrorWithCode extends Error {
@@ -72,9 +64,7 @@ interface KeyGeneratorContentProps {
 }
 
 function getInjectedProvider(): Eip1193Provider | null {
-  const maybeProvider = (
-    window as Window & { ethereum?: Eip1193Provider }
-  ).ethereum
+  const maybeProvider = (window as Window & { ethereum?: Eip1193Provider }).ethereum
 
   if (!maybeProvider || typeof maybeProvider.request !== 'function') {
     return null
@@ -96,16 +86,18 @@ function isMissingChainError(error: unknown) {
   }
 
   const candidate = error as ErrorWithCode
-  const cause = candidate.cause as { code?: number, message?: string } | undefined
+  const cause = candidate.cause as { code?: number; message?: string } | undefined
   const message = candidate.message.toLowerCase()
   const causeMessage = cause?.message?.toLowerCase() ?? ''
 
-  return candidate.code === 4902
-    || cause?.code === 4902
-    || message.includes('4902')
-    || causeMessage.includes('4902')
-    || message.includes('unrecognized chain')
-    || causeMessage.includes('unrecognized chain')
+  return (
+    candidate.code === 4902 ||
+    cause?.code === 4902 ||
+    message.includes('4902') ||
+    causeMessage.includes('4902') ||
+    message.includes('unrecognized chain') ||
+    causeMessage.includes('unrecognized chain')
+  )
 }
 
 function readStoredEmailDraft() {
@@ -133,8 +125,7 @@ function readStoredEmailDraft() {
     }
 
     window.localStorage.removeItem(EMAIL_STORAGE_KEY)
-  }
-  catch {
+  } catch {
     window.localStorage.removeItem(EMAIL_STORAGE_KEY)
   }
 
@@ -172,15 +163,17 @@ function ActionPrompt({
 
         <div className="mt-5 flex justify-center">
           <div className="relative size-36 overflow-hidden rounded-[30px] bg-card text-primary">
-            <div className={`
-              pointer-events-none absolute inset-0 animate-[spin_1500ms_linear_infinite]
-              bg-[conic-gradient(from_0deg,transparent_0deg,transparent_288deg,currentColor_320deg,currentColor_350deg,transparent_360deg)]
-            `}
+            <div
+              className={`pointer-events-none absolute inset-0 animate-[spin_1500ms_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0deg,transparent_288deg,currentColor_320deg,currentColor_350deg,transparent_360deg)]`}
             />
             <div className="absolute inset-[3px] rounded-[26px] bg-background" />
             <div className="relative flex size-full items-center justify-center">
               <div className="flex size-[88%] items-center justify-center">
-                {showConnectedWalletIcon ? <ActionPromptWalletIcon /> : <WalletIcon className="size-16 text-primary" strokeWidth={1.7} />}
+                {showConnectedWalletIcon ? (
+                  <ActionPromptWalletIcon />
+                ) : (
+                  <WalletIcon className="size-16 text-primary" strokeWidth={1.7} />
+                )}
               </div>
             </div>
           </div>
@@ -223,25 +216,15 @@ export function KeyGenerator() {
   const account = useAccount()
   const flowKey = account.address ?? 'anonymous'
 
-  return (
-    <KeyGeneratorContent
-      key={flowKey}
-      account={account}
-      runtimeConfig={runtimeConfig}
-    />
-  )
+  return <KeyGeneratorContent key={flowKey} account={account} runtimeConfig={runtimeConfig} />
 }
 
 function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProps) {
   const siteName = runtimeConfig.siteName.trim() || 'Kuest'
-  const targetChainMode = runtimeConfig.kuestChainMode === 'polygon'
-    ? 'polygon'
-    : 'amoy'
+  const targetChainMode = runtimeConfig.kuestChainMode === 'polygon' ? 'polygon' : 'amoy'
   const requiredChain = targetChainMode === 'polygon' ? polygon : polygonAmoy
   const requiredChainId = requiredChain.id
-  const requiredChainLabel = targetChainMode === 'polygon'
-    ? 'Polygon Mainnet (137)'
-    : 'Polygon Amoy Testnet (80002)'
+  const requiredChainLabel = targetChainMode === 'polygon' ? 'Polygon Mainnet (137)' : 'Polygon Amoy Testnet (80002)'
 
   const { disconnect, status: disconnectStatus } = useDisconnect()
   const { switchChain, status: switchStatus } = useSwitchChain()
@@ -249,12 +232,8 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
   const { open: openAppKit, isReady: isAppKitReady } = useAppKit()
   const signingInFlightRef = useRef(false)
 
-  const isConnected
-    = account.status === 'connected' && Boolean(account.address)
-  const onRequiredChain
-    = isConnected && account.chainId !== undefined
-      ? account.chainId === requiredChainId
-      : false
+  const isConnected = account.status === 'connected' && Boolean(account.address)
+  const onRequiredChain = isConnected && account.chainId !== undefined ? account.chainId === requiredChainId : false
 
   const [bundle, setBundle] = useState<KeyBundle | null>(null)
   const [keys, setKeys] = useState<string[]>([])
@@ -278,12 +257,8 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
     setEmailDraft(value)
     const trimmed = value.trim()
     if (trimmed) {
-      window.localStorage.setItem(
-        EMAIL_STORAGE_KEY,
-        JSON.stringify({ value: trimmed, savedAt: Date.now() }),
-      )
-    }
-    else {
+      window.localStorage.setItem(EMAIL_STORAGE_KEY, JSON.stringify({ value: trimmed, savedAt: Date.now() }))
+    } else {
       window.localStorage.removeItem(EMAIL_STORAGE_KEY)
     }
   }
@@ -294,10 +269,8 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
     setConnectPromptRequested(true)
     try {
       await openAppKit()
-    }
-    catch (error) {
-      const message
-        = error instanceof Error ? error.message : 'Failed to open wallet modal.'
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to open wallet modal.'
       setFlowError(message)
       setConnectPromptRequested(false)
     }
@@ -326,18 +299,15 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
         )
       }
 
-      await switchChain({ chainId: requiredChainId })
+      switchChain({ chainId: requiredChainId })
       setFlowInfo(`${requiredChainLabel} is active.`)
       return true
-    }
-    catch (error) {
+    } catch (error) {
       if (requiredChainId === polygonAmoy.id && isMissingChainError(error)) {
         try {
           const provider = getInjectedProvider()
           if (!provider) {
-            throw new Error(
-              'Auto-add works only with injected wallets (browser extension or in-app browser).',
-            )
+            throw new Error('Auto-add works only with injected wallets (browser extension or in-app browser).')
           }
 
           setFlowInfo('Adding Polygon Amoy to your wallet...')
@@ -351,45 +321,41 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
           })
           setFlowInfo('Polygon Amoy enabled. You can sign now.')
           return true
-        }
-        catch (addError) {
+        } catch (addError) {
           setFlowError(
-            getErrorMessage(
-              addError,
-              'Unable to add Polygon Amoy automatically. Switch manually in your wallet.',
-            ),
+            getErrorMessage(addError, 'Unable to add Polygon Amoy automatically. Switch manually in your wallet.'),
           )
           return false
         }
       }
 
-      setFlowError(
-        getErrorMessage(error, `Unable to switch to ${requiredChainLabel}.`),
-      )
+      setFlowError(getErrorMessage(error, `Unable to switch to ${requiredChainLabel}.`))
       return false
-    }
-    finally {
+    } finally {
       setIsEnsuringNetwork(false)
     }
   }
 
-  useEffect(function clearFlowErrorOnInteraction() {
-    if (!flowError) {
-      return
-    }
+  useEffect(
+    function clearFlowErrorOnInteraction() {
+      if (!flowError) {
+        return
+      }
 
-    function clearFlowError() {
-      setFlowError(null)
-    }
+      function clearFlowError() {
+        setFlowError(null)
+      }
 
-    window.addEventListener('pointerdown', clearFlowError, { once: true })
-    window.addEventListener('keydown', clearFlowError, { once: true })
+      window.addEventListener('pointerdown', clearFlowError, { once: true })
+      window.addEventListener('keydown', clearFlowError, { once: true })
 
-    return () => {
-      window.removeEventListener('pointerdown', clearFlowError)
-      window.removeEventListener('keydown', clearFlowError)
-    }
-  }, [flowError])
+      return () => {
+        window.removeEventListener('pointerdown', clearFlowError)
+        window.removeEventListener('keydown', clearFlowError)
+      }
+    },
+    [flowError],
+  )
 
   function getAuthContext() {
     if (!bundle) {
@@ -478,14 +444,8 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
 
       setBundle({ ...result, address: account.address })
       handleRefreshKeys().catch(() => {})
-      setKeys(previous =>
-        previous.includes(result.apiKey)
-          ? previous
-          : [result.apiKey, ...previous],
-      )
-      setKeysHelper(
-        'New key minted. Use refresh to fetch all keys from Kuest.',
-      )
+      setKeys((previous) => (previous.includes(result.apiKey) ? previous : [result.apiKey, ...previous]))
+      setKeysHelper('New key minted. Use refresh to fetch all keys from Kuest.')
       setKeysError(null)
 
       const trimmedEmail = emailDraft.trim()
@@ -502,45 +462,26 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
               : 'Saved. You can revoke any time.',
           )
           updateEmailDraft(trimmedEmail)
+        } catch (error) {
+          setEmailNotice(error instanceof Error ? `Email save failed: ${error.message}` : 'Email save failed.')
         }
-        catch (error) {
-          setEmailNotice(
-            error instanceof Error
-              ? `Email save failed: ${error.message}`
-              : 'Email save failed.',
-          )
-        }
-      }
-      else {
+      } else {
         setEmailNotice(null)
         updateEmailDraft('')
       }
 
       setFlowInfo(null)
-    }
-    catch (error) {
+    } catch (error) {
       setFlowInfo(null)
       if (error instanceof UserRejectedRequestError) {
         setFlowError('Signature was rejected in your wallet.')
-      }
-      else if (
-        error instanceof Error
-        && error.message?.includes('Proposal expired')
-      ) {
-        setFlowError(
-          'Wallet session expired. Reopen your wallet and try connecting again.',
-        )
+      } else if (error instanceof Error && error.message?.includes('Proposal expired')) {
+        setFlowError('Wallet session expired. Reopen your wallet and try connecting again.')
         disconnect()
+      } else {
+        setFlowError(error instanceof Error ? error.message : 'Unable to generate keys. Please try again.')
       }
-      else {
-        setFlowError(
-          error instanceof Error
-            ? error.message
-            : 'Unable to generate keys. Please try again.',
-        )
-      }
-    }
-    finally {
+    } finally {
       signingInFlightRef.current = false
       setIsSigning(false)
     }
@@ -559,20 +500,15 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
           ? `Loaded ${latest.length} active key${latest.length > 1 ? 's' : ''}.`
           : 'No keys found for this wallet.',
       )
-    }
-    catch (error) {
-      const message
-        = error instanceof Error ? error.message : 'Failed to load keys.'
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load keys.'
       setKeysError(message)
       setKeys([])
       if (error instanceof Error && /401|403/.test(message)) {
         setBundle(null)
-        setKeysHelper(
-          'Credentials look invalid. Generate a new API key to continue.',
-        )
+        setKeysHelper('Credentials look invalid. Generate a new API key to continue.')
       }
-    }
-    finally {
+    } finally {
       setKeysLoading(false)
     }
   }
@@ -584,32 +520,24 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
     try {
       const auth = getAuthContext()
       await revokeKuestKey(auth, key)
-      setKeys(previous => previous.filter(value => value !== key))
+      setKeys((previous) => previous.filter((value) => value !== key))
       if (bundle?.apiKey === key) {
         setBundle(null)
         setEmailNotice(null)
         setKeysHelper('Key revoked. Generate a new API key to keep trading.')
-      }
-      else {
+      } else {
         setKeysHelper('Key revoked. Refresh to verify remaining credentials.')
       }
-    }
-    catch (error) {
-      setKeysError(
-        error instanceof Error ? error.message : 'Failed to revoke key.',
-      )
-    }
-    finally {
+    } catch (error) {
+      setKeysError(error instanceof Error ? error.message : 'Failed to revoke key.')
+    } finally {
       setKeysLoading(false)
     }
   }
 
   const networkActionPending = isEnsuringNetwork || switchStatus === 'pending'
-  const canSign
-    = isConnected && onRequiredChain && !isSigning && !networkActionPending
-  const chainStepLabel = targetChainMode === 'amoy'
-    ? 'Activate Polygon Amoy'
-    : 'Activate Polygon Mainnet'
+  const canSign = isConnected && onRequiredChain && !isSigning && !networkActionPending
+  const chainStepLabel = targetChainMode === 'amoy' ? 'Activate Polygon Amoy' : 'Activate Polygon Mainnet'
   const currentStep = !isConnected
     ? {
         number: 1,
@@ -620,28 +548,29 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
         disabled: !isAppKitReady,
       }
     : !onRequiredChain
-        ? {
-            number: 2,
-            title: chainStepLabel,
-            description: targetChainMode === 'amoy'
+      ? {
+          number: 2,
+          title: chainStepLabel,
+          description:
+            targetChainMode === 'amoy'
               ? 'We will try to switch automatically and add Amoy if needed.'
               : 'Switch network before signing.',
-            actionLabel: networkActionPending
-              ? 'Switching network...'
-              : targetChainMode === 'amoy'
-                ? 'Activate Amoy'
-                : 'Switch network',
-            action: handleEnsureRequiredNetwork,
-            disabled: networkActionPending,
-          }
-        : {
-            number: 3,
-            title: 'Sign to generate API key',
-            description: 'One EIP-712 signature, no funds moved.',
-            actionLabel: isSigning ? 'Waiting for signature...' : 'Sign now',
-            action: handleSignAndGenerate,
-            disabled: !canSign,
-          }
+          actionLabel: networkActionPending
+            ? 'Switching network...'
+            : targetChainMode === 'amoy'
+              ? 'Activate Amoy'
+              : 'Switch network',
+          action: handleEnsureRequiredNetwork,
+          disabled: networkActionPending,
+        }
+      : {
+          number: 3,
+          title: 'Sign to generate API key',
+          description: 'One EIP-712 signature, no funds moved.',
+          actionLabel: isSigning ? 'Waiting for signature...' : 'Sign now',
+          action: handleSignAndGenerate,
+          disabled: !canSign,
+        }
 
   const steps = [
     {
@@ -661,9 +590,7 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
     },
   ]
   const activeStepNumber = bundle ? 3 : currentStep.number
-  const completedSteps = steps.filter(
-    step => step.done && step.number < currentStep.number,
-  )
+  const completedSteps = steps.filter((step) => step.done && step.number < currentStep.number)
 
   return (
     <>
@@ -686,22 +613,14 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
 
           <div className="mt-6 w-full auth-stepper">
             <div className="grid w-full grid-cols-3">
-              {steps.map(step => (
+              {steps.map((step) => (
                 <div
                   key={step.number}
-                  data-state={
-                    step.number === activeStepNumber
-                      ? 'active'
-                      : step.done
-                        ? 'done'
-                        : 'idle'
-                  }
+                  data-state={step.number === activeStepNumber ? 'active' : step.done ? 'done' : 'idle'}
                   className="auth-step text-center text-xs sm:text-sm"
                 >
                   <span className="auth-step-index shrink-0">{step.number}</span>
-                  <span className="truncate">
-                    {step.label}
-                  </span>
+                  <span className="truncate">{step.label}</span>
                 </div>
               ))}
             </div>
@@ -709,21 +628,13 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
 
           {!bundle && (
             <div className="mt-6 space-y-6">
-              {completedSteps.map(step => (
-                <div
-                  key={step.number}
-                  className="flex items-center justify-between auth-subpanel px-6 py-4"
-                >
+              {completedSteps.map((step) => (
+                <div key={step.number} className="flex items-center justify-between auth-subpanel px-6 py-4">
                   <p className="text-sm font-semibold text-foreground">
-                    {step.number}
-                    .
-                    {' '}
-                    {step.label}
+                    {step.number}. {step.label}
                   </p>
-                  <div className={`
-                    flex size-12 items-center justify-center rounded-full border border-white/70 bg-white
-                    text-background shadow-[0_12px_28px_rgba(0,0,0,0.18)]
-                  `}
+                  <div
+                    className={`flex size-12 items-center justify-center rounded-full border border-white/70 bg-white text-background shadow-[0_12px_28px_rgba(0,0,0,0.18)]`}
                   >
                     <CheckIcon className="size-7" strokeWidth={2.4} />
                   </div>
@@ -732,32 +643,25 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
 
               <div className="auth-panel p-6">
                 <p className="text-xs font-semibold tracking-[0.28em] text-muted-foreground uppercase">
-                  Step
-                  {' '}
-                  {currentStep.number}
+                  Step {currentStep.number}
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
-                  {currentStep.title}
-                </h2>
+                <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">{currentStep.title}</h2>
                 <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-                  {currentStep.number === 1
-                    ? (
-                        <>
-                          <a
-                            href="https://metamask.io/download"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium auth-link"
-                          >
-                            MetaMask browser extension
-                          </a>
-                          {' '}
-                          is recommended for the simplest setup.
-                          {' '}
-                          {currentStep.description}
-                        </>
-                      )
-                    : currentStep.description}
+                  {currentStep.number === 1 ? (
+                    <>
+                      <a
+                        href="https://metamask.io/download"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium auth-link"
+                      >
+                        MetaMask browser extension
+                      </a>{' '}
+                      is recommended for the simplest setup. {currentStep.description}
+                    </>
+                  ) : (
+                    currentStep.description
+                  )}
                 </p>
 
                 {isConnected && account.address && (
@@ -774,11 +678,7 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
                       type="button"
                       onClick={currentStep.action}
                       disabled={currentStep.disabled}
-                      className={`
-                        inline-flex w-full items-center justify-center auth-cta px-6 py-4 text-sm font-semibold
-                        tracking-[0.16em] uppercase
-                        focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none
-                      `}
+                      className={`inline-flex w-full items-center justify-center auth-cta px-6 py-4 text-sm font-semibold tracking-[0.16em] uppercase focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none`}
                     >
                       {currentStep.actionLabel}
                     </button>
@@ -787,9 +687,7 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
 
                 {flowError && (
                   <p
-                    className={`
-                      mx-auto mt-4 max-w-sm auth-feedback auth-feedback-error px-4 py-3 text-sm text-destructive
-                    `}
+                    className={`mx-auto mt-4 max-w-sm auth-feedback auth-feedback-error px-4 py-3 text-sm text-destructive`}
                   >
                     {flowError}
                   </p>
@@ -799,16 +697,11 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
               <div className="auth-subpanel px-5 py-4">
                 <button
                   type="button"
-                  onClick={() => setAdvancedOpen(previous => !previous)}
-                  className={`
-                    flex w-full items-center justify-between text-left text-sm font-medium text-foreground transition
-                    hover:text-foreground
-                  `}
+                  onClick={() => setAdvancedOpen((previous) => !previous)}
+                  className={`flex w-full items-center justify-between text-left text-sm font-medium text-foreground transition hover:text-foreground`}
                 >
                   <span>Advanced options</span>
-                  <ChevronDownIcon
-                    className={`size-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
-                  />
+                  <ChevronDownIcon className={`size-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {advancedOpen && (
@@ -821,7 +714,7 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
                         id="kuest-email"
                         type="email"
                         value={emailDraft}
-                        onChange={event => updateEmailDraft(event.target.value)}
+                        onChange={(event) => updateEmailDraft(event.target.value)}
                         placeholder="you@team.com"
                         className="w-full auth-input px-4 py-2.5 text-sm"
                       />
@@ -832,30 +725,18 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
             </div>
           )}
 
-          {flowInfo && (
-            <p className="mt-6 auth-feedback px-4 py-3 text-sm text-foreground">
-              {flowInfo}
-            </p>
-          )}
-          {emailNotice && (
-            <p className="mt-4 auth-feedback auth-feedback-success px-4 py-3 text-sm">
-              {emailNotice}
-            </p>
-          )}
+          {flowInfo && <p className="mt-6 auth-feedback px-4 py-3 text-sm text-foreground">{flowInfo}</p>}
+          {emailNotice && <p className="mt-4 auth-feedback auth-feedback-success px-4 py-3 text-sm">{emailNotice}</p>}
 
           {bundle && (
             <div className="mt-6 space-y-6">
-              <div className={`
-                mx-auto flex size-24 animate-[auth-success-pop_520ms_ease-out] items-center justify-center rounded-full
-                border border-white/70 bg-white text-background shadow-[0_18px_40px_rgba(0,0,0,0.22)]
-              `}
+              <div
+                className={`mx-auto flex size-24 animate-[auth-success-pop_520ms_ease-out] items-center justify-center rounded-full border border-white/70 bg-white text-background shadow-[0_18px_40px_rgba(0,0,0,0.22)]`}
               >
                 <CheckIcon className="size-12" strokeWidth={2.2} />
               </div>
               <div className="text-center">
-                <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">
-                  API key generated successfully
-                </h2>
+                <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">API key generated successfully</h2>
                 <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
                   Copy the credentials block below and paste it into your `.env` file.
                 </p>
@@ -866,10 +747,7 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
                   type="button"
                   onClick={handleSignAndGenerate}
                   disabled={!canSign}
-                  className={`
-                    inline-flex items-center justify-center auth-secondary-button px-4 py-2 text-xs font-semibold
-                    tracking-[0.2em] uppercase
-                  `}
+                  className={`inline-flex items-center justify-center auth-secondary-button px-4 py-2 text-xs font-semibold tracking-[0.2em] uppercase`}
                 >
                   Generate another key
                 </button>
@@ -881,16 +759,11 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
             <div className="mt-6 auth-subpanel px-5 py-4">
               <button
                 type="button"
-                onClick={() => setShowKeyManagement(previous => !previous)}
-                className={`
-                  flex w-full items-center justify-between text-left text-sm font-medium text-foreground transition
-                  hover:text-foreground
-                `}
+                onClick={() => setShowKeyManagement((previous) => !previous)}
+                className={`flex w-full items-center justify-between text-left text-sm font-medium text-foreground transition hover:text-foreground`}
               >
                 <span>Key Management</span>
-                <ChevronDownIcon
-                  className={`size-4 transition-transform ${showKeyManagement ? 'rotate-180' : ''}`}
-                />
+                <ChevronDownIcon className={`size-4 transition-transform ${showKeyManagement ? 'rotate-180' : ''}`} />
               </button>
               {showKeyManagement && (
                 <div className="mt-4 border-t border-border/60 pt-4">
@@ -914,11 +787,7 @@ function KeyGeneratorContent({ account, runtimeConfig }: KeyGeneratorContentProp
                 type="button"
                 onClick={() => disconnect()}
                 disabled={disconnectStatus === 'pending'}
-                className={`
-                  inline-flex items-center justify-center auth-secondary-button px-3 py-1.5 text-xs font-semibold
-                  tracking-[0.2em] text-muted-foreground uppercase
-                  hover:text-foreground
-                `}
+                className={`inline-flex items-center justify-center auth-secondary-button px-3 py-1.5 text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground`}
               >
                 Disconnect
               </button>

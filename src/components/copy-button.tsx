@@ -8,12 +8,7 @@ interface CopyButtonProps {
   ariaLabel?: string
 }
 
-export function CopyButton({
-  value,
-  size = 'md',
-  className = '',
-  ariaLabel = 'Copy to clipboard',
-}: CopyButtonProps) {
+export function CopyButton({ value, size = 'md', className = '', ariaLabel = 'Copy to clipboard' }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -21,8 +16,7 @@ export function CopyButton({
       await navigator.clipboard.writeText(value)
       setCopied(true)
       window.setTimeout(setCopied, 1500, false)
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Copy failed', error)
     }
   }
@@ -33,10 +27,7 @@ export function CopyButton({
     <button
       type="button"
       onClick={handleCopy}
-      className={`
-        inline-flex items-center justify-center auth-icon-button p-2
-        ${className}
-      `}
+      className={`inline-flex items-center justify-center auth-icon-button p-2 ${className} `}
       aria-label={ariaLabel}
     >
       {copied ? <CheckIcon size={iconSize} strokeWidth={2.5} /> : <CopyIcon size={iconSize} />}

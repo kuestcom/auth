@@ -1,24 +1,20 @@
 {
   "name": "kuest-auth-worker",
-  "type": "module",
   "private": true,
-  "packageManager": "pnpm@11.5.0",
   "description": "Kuest API credential generator",
   "repository": {
     "type": "git",
     "url": "https://github.com/kuestcom/auth.git"
   },
-  "engines": {
-    "node": "24.x"
-  },
+  "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "tsc --noEmit && vite build",
-    "knip": "knip --fix --no-config-hints",
-    "lint": "eslint . --fix",
+    "dev": "vp dev",
+    "build": "vp build",
+    "knip": "knip --fix",
+    "check": "vp check --fix",
     "deploy": "pnpm build && wrangler deploy",
     "preview": "pnpm build && wrangler dev",
-    "prepare": "husky"
+    "prepare": "vp config"
   },
   "dependencies": {
     "@reown/appkit": "1.8.23",
@@ -32,28 +28,23 @@
     "wagmi": "2.19.5"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "9.2.0",
     "@cloudflare/vite-plugin": "1.47.0",
     "@cloudflare/workers-types": "5.20260724.1",
-    "@eslint-react/eslint-plugin": "5.18.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.4",
-    "eslint": "10.4.0",
-    "eslint-plugin-better-tailwindcss": "4.7.0",
-    "eslint-plugin-react-refresh": "0.5.3",
     "eslint-plugin-react-you-might-not-need-an-effect": "1.0.1",
-    "husky": "9.1.7",
     "knip": "6.29.0",
-    "lint-staged": "17.2.0",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "vite": "8.1.5",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
     "wrangler": "4.114.0"
   },
-  "lint-staged": {
-    "*": "eslint --fix"
-  }
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "pnpm@11.5.0"
 }

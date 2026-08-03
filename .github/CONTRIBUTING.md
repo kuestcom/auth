@@ -36,12 +36,12 @@ For code contributions:
 ### Development Setup
 
 1. Fork and clone the repository
-2. Use Node.js 24.x (see `.nvmrc`)
+2. Use Node.js 24.x (see `.node-version`)
 3. Install dependencies: `pnpm install`
 4. Create a branch using the appropriate prefix, for example `feat/name-in-english` or `fix/name-in-english`
 5. Make your changes
 6. Review your diff before opening the PR
-7. Run `pnpm lint`, `pnpm knip` and `pnpm build`
+7. Run `pnpm knip`, `pnpm check` and `pnpm build`
 8. Rebase on the latest `main`
 9. Commit and push to your fork
 10. Open a pull request with a clear description

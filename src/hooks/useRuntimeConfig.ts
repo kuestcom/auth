@@ -1,5 +1,6 @@
-import type { RuntimeConfig } from '@/types/runtime-config'
 import { createContext, use } from 'react'
+
+import type { RuntimeConfig } from '@/types/runtime-config'
 
 export interface RuntimeConfigState {
   config: RuntimeConfig | null

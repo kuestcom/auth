@@ -1,21 +1,8 @@
-import type {
-  CreateKuestKeyInput,
-  KuestAuthContext,
-} from '../shared/api'
+import type { CreateKuestKeyInput, KuestAuthContext } from '../shared/api'
 import type { Env } from './types'
-import {
-  HttpError,
-  json,
-  noContent,
-  readJsonBody,
-  requireMethod,
-  requireString,
-} from './http'
-import {
-  createKuestKey,
-  listKuestKeyMetadata,
-  revokeKuestKey,
-} from './kuest'
+
+import { HttpError, json, noContent, readJsonBody, requireMethod, requireString } from './http'
+import { createKuestKey, listKuestKeyMetadata, revokeKuestKey } from './kuest'
 import { saveKeyEmail } from './postgres'
 import { getRuntimeConfig } from './runtime-config'
 
@@ -114,8 +101,7 @@ async function handleApi(request: Request, env: Env) {
     }
 
     throw new HttpError(404, 'API route not found.')
-  }
-  catch (error) {
+  } catch (error) {
     const normalized = normalizeError(error)
     if (normalized.status >= 500) {
       console.warn('[api] request failed', {
@@ -123,10 +109,7 @@ async function handleApi(request: Request, env: Env) {
         message: normalized.logMessage,
       })
     }
-    return json(
-      { error: { message: normalized.message } },
-      { status: normalized.status },
-    )
+    return json({ error: { message: normalized.message } }, { status: normalized.status })
   }
 }
 

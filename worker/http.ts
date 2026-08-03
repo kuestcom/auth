@@ -37,9 +37,8 @@ export async function readJsonBody<T>(request: Request): Promise<T> {
   }
 
   try {
-    return await request.json() as T
-  }
-  catch {
+    return (await request.json()) as T
+  } catch {
     throw new HttpError(400, 'Invalid JSON request body.')
   }
 }
@@ -50,11 +49,7 @@ export function requireMethod(request: Request, method: string) {
   }
 }
 
-export function requireString(
-  value: unknown,
-  field: string,
-  options: { allowEmpty?: boolean } = {},
-) {
+export function requireString(value: unknown, field: string, options: { allowEmpty?: boolean } = {}) {
   if (typeof value !== 'string') {
     throw new HttpError(400, `${field} must be a string.`)
   }
@@ -69,9 +64,8 @@ export function requireString(
 
 export async function readJsonSafely(response: Response) {
   try {
-    return await response.json() as unknown
-  }
-  catch {
+    return (await response.json()) as unknown
+  } catch {
     return null
   }
 }

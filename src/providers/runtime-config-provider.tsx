@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
-import type { RuntimeConfig } from '@/types/runtime-config'
+
 import { useEffect, useMemo, useState } from 'react'
+
+import type { RuntimeConfig } from '@/types/runtime-config'
+
 import { RuntimeConfigContext } from '@/hooks/useRuntimeConfig'
 import { getRuntimeConfig } from '@/lib/api'
 
@@ -22,21 +25,13 @@ export function RuntimeConfigProvider({ children }: RuntimeConfigProviderProps) 
           return
         }
         setConfig(nextConfig)
-        setError(
-          nextConfig.reownAppKitProjectId.trim()
-            ? null
-            : 'Wallet connection is not configured.',
-        )
+        setError(nextConfig.reownAppKitProjectId.trim() ? null : 'Wallet connection is not configured.')
       })
       .catch((requestError) => {
         if (!active) {
           return
         }
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : 'Failed to load runtime config.',
-        )
+        setError(requestError instanceof Error ? requestError.message : 'Failed to load runtime config.')
       })
       .finally(() => {
         if (active) {
@@ -49,14 +44,7 @@ export function RuntimeConfigProvider({ children }: RuntimeConfigProviderProps) 
     }
   }, [])
 
-  const value = useMemo(
-    () => ({ config, loading, error }),
-    [config, loading, error],
-  )
+  const value = useMemo(() => ({ config, loading, error }), [config, loading, error])
 
-  return (
-    <RuntimeConfigContext value={value}>
-      {children}
-    </RuntimeConfigContext>
-  )
+  return <RuntimeConfigContext value={value}>{children}</RuntimeConfigContext>
 }
