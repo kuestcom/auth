@@ -22,8 +22,8 @@ jobs:
         with:
           node-version-file: .node-version
       - run: pnpm install --frozen-lockfile
-      - run: pnpm knip
-      - run: pnpm vp check
+      - run: pnpm exec knip
+      - run: pnpm exec vp check
 
   build:
     runs-on: ubuntu-24.04
