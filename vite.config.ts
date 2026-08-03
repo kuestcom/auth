@@ -54,7 +54,7 @@ export default defineConfig({
       browser: true,
       node: true,
     },
-    ignorePatterns: ['**.yml'],
+    ignorePatterns: ['.github/**'],
     rules: {
       curly: ['error', 'all'],
       'func-style': [
