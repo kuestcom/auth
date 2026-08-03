@@ -30,7 +30,7 @@ export default defineConfig({
     ignorePatterns: ['pnpm-lock.yaml'],
   },
   staged: {
-    '*': 'vp lint --fix',
+    '*': 'vp check --fix',
   },
   lint: {
     plugins: ['oxc', 'typescript', 'unicorn', 'react', 'import'],
@@ -54,7 +54,6 @@ export default defineConfig({
       browser: true,
       node: true,
     },
-    ignorePatterns: ['.github/**'],
     rules: {
       curly: ['error', 'all'],
       'func-style': [
