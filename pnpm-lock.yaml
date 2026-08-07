@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    vite-plus:
+      specifier: 0.2.7
+      version: 0.2.7
+
 overrides:
   '@walletconnect/relay-auth>@noble/curves': 1.8.1
   '@walletconnect/relay-auth>@noble/hashes': 1.7.1
@@ -78,7 +84,7 @@ importers:
         specifier: npm:@voidzero-dev/vite-plus-core@0.2.4
         version: '@voidzero-dev/vite-plus-core@0.2.4(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0)'
       vite-plus:
-        specifier: 0.2.7
+        specifier: 'catalog:'
         version: 0.2.7(@types/node@26.1.2)(@voidzero-dev/vite-plus-core@0.2.4(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))(bufferutil@4.1.0)(esbuild@0.28.1)(jiti@2.7.0)(typescript@7.0.2)(utf-8-validate@5.0.10)(yaml@2.9.0)
       wrangler:
         specifier: 4.117.0
@@ -3556,11 +3562,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@3.3.17:
-    resolution: {integrity: sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -3820,10 +3821,6 @@ packages:
 
   postcss@8.5.25:
     resolution: {integrity: sha512-DTPx3RWSSnWyzLxQnlH0rJP+EW5ekl16ZU4/psbIhA0e53kJfdgaN5vKM+xP7yJtXVu+nfdVFmlgFDEKAe4Pyw==}
-    engines: {node: ^10 || ^12 || >=14}
-
-  postcss@8.5.26:
-    resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
     engines: {node: ^10 || ^12 || >=14}
 
   postgres@3.4.9:
@@ -4446,18 +4443,6 @@ packages:
 
   ws@8.21.1:
     resolution: {integrity: sha512-+0NTnW77fFN/DjQi6k/Sq/Yvk4Sgajw7urW8V+asjXnRgDs9gyGkdb7EzgfhA4goXsRIZKE28fzIXBHEzhuiWw==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.21.2:
-    resolution: {integrity: sha512-54dMVAo4WIe6SKy3vBgN+9bJZqqQ8IMRevAkOLQALhi49qkkQDQfWdAZ8KQlXiEabw88ARXXdUrlvtbKQX+aKw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -6883,7 +6868,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.1.1
       vitest: 4.1.10(@types/node@26.1.2)(@vitest/browser-preview@4.1.10)(@voidzero-dev/vite-plus-core@0.2.4(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))
-      ws: 8.21.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -6950,7 +6935,7 @@ snapshots:
       '@oxc-project/runtime': 0.141.0
       '@oxc-project/types': 0.141.0
       lightningcss: 1.33.0
-      postcss: 8.5.26
+      postcss: 8.5.25
       yuku-codegen: 0.5.48
       yuku-parser: 0.5.48
     optionalDependencies:
@@ -8819,8 +8804,6 @@ snapshots:
 
   nanoid@3.3.16: {}
 
-  nanoid@3.3.17: {}
-
   natural-compare@1.4.0: {}
 
   node-addon-api@2.0.2: {}
@@ -9211,12 +9194,6 @@ snapshots:
   postcss@8.5.25:
     dependencies:
       nanoid: 3.3.16
-      picocolors: 1.1.1
-      source-map-js: 1.2.1
-
-  postcss@8.5.26:
-    dependencies:
-      nanoid: 3.3.17
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -9899,11 +9876,6 @@ snapshots:
       utf-8-validate: 5.0.10
 
   ws@8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10):
-    optionalDependencies:
-      bufferutil: 4.1.0
-      utf-8-validate: 5.0.10
-
-  ws@8.21.2(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     optionalDependencies:
       bufferutil: 4.1.0
       utf-8-validate: 5.0.10
